@@ -1,0 +1,23 @@
+# dependencies
+node_modules/
+.expo/
+
+# env files
+.env
+.env.local
+.env.*.local
+
+# build files
+build/
+dist/
+/mobile-app/android/app/build/
+/mobile-app/ios/build/
+
+# generated model files
+ai-engine/models/*.tflite
+ai-engine/models/*.pb
+ai-engine/models/*.h5
+
+# OS generated files
+.DS_Store
+Thumbs.db

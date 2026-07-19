@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, Image } from 'react-native';
+import { Camera, CameraType } from 'expo-camera';
 import Card from '../components/Card';
 import CustomButton from '../components/CustomButton';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -12,13 +13,22 @@ import { recyclingKnowledgeBase } from '../utils/recyclingKnowledgeBase';
 import { calculateScore } from '../utils/calculateScore';
 import { formatDate } from '../utils/formatDate';
 import { WasteItem } from '../types/WasteItem';
-
-const SAMPLE_IMAGE_URI = 'demo://eco-snap-sample-image';
+import { useCamera } from '../hooks/useCamera';
 
 const CameraScreen = () => {
   const { addScan, latestScan } = useApp();
   const [isScanning, setIsScanning] = useState(false);
   const [currentDetection, setCurrentDetection] = useState<WasteItem | null>(latestScan);
+
+  const {
+    permission,
+    requestPermission,
+    cameraRef,
+    capturedImage,
+    takePicture,
+    retakePicture,
+    onCameraReady,
+  } = useCamera();
 
   const activeCategory = currentDetection?.category ?? WasteCategory.UNKNOWN;
   const categoryInfo = WASTE_CATEGORIES_INFO[activeCategory];
@@ -31,17 +41,19 @@ const CameraScreen = () => {
     [activeCategory]
   );
 
-  const runDemoScan = async () => {
+  const runAnalysis = async () => {
+    if (!capturedImage) return;
     setIsScanning(true);
 
     try {
-      const detection = await detectionService.detectWaste(SAMPLE_IMAGE_URI);
+      // NOTE: In Step 5, this will be replaced with real TFLite inference.
+      const detection = await detectionService.detectWaste(capturedImage.uri);
       const scannedItem: WasteItem = {
         id: `scan-${Date.now()}`,
         userId: 'demo-user',
         category: detection.category,
         confidenceScore: detection.confidence,
-        imageUrl: SAMPLE_IMAGE_URI,
+        imageUrl: capturedImage.uri,
         detectedAt: new Date(),
         pointsAwarded: calculateScore(detection.category),
       };
@@ -49,7 +61,7 @@ const CameraScreen = () => {
       addScan(scannedItem);
       setCurrentDetection(scannedItem);
     } catch (error) {
-      console.error('Failed to run demo scan:', error);
+      console.error('Failed to run scan:', error);
     } finally {
       setIsScanning(false);
     }
@@ -60,46 +72,87 @@ const CameraScreen = () => {
     return analyticsService.getUserImpact('demo-user', items);
   }, [currentDetection]);
 
+  if (!permission) {
+    return (
+      <View style={styles.centerContainer}>
+        <LoadingSpinner />
+      </View>
+    );
+  }
+
+  if (!permission.granted) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.message}>We need your permission to show the camera</Text>
+        <CustomButton title="Grant Permission" onPress={requestPermission} />
+      </View>
+    );
+  }
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>AI Waste Scanner</Text>
-      <Text style={styles.subtitle}>
-        Phase 2 connects the camera flow to detection, recommendations, and impact tracking.
-      </Text>
 
-      <Card style={styles.heroCard}>
-        <Text style={styles.sectionTitle}>Latest Detection</Text>
-        <Text style={styles.category}>{categoryInfo.description}</Text>
-        <Text style={styles.detail}>Category: {activeCategory}</Text>
-        <Text style={styles.detail}>Confidence: {Math.round((currentDetection?.confidenceScore ?? 0) * 100)}%</Text>
-        <Text style={styles.detail}>Points: {currentDetection?.pointsAwarded ?? 0}</Text>
-        <Text style={styles.detail}>Captured: {currentDetection ? formatDate(currentDetection.detectedAt) : 'No scan yet'}</Text>
+      <Card style={styles.cameraCard}>
+        {!capturedImage ? (
+          <View style={styles.cameraContainer}>
+            <Camera
+              style={styles.camera}
+              type={CameraType.back}
+              ref={cameraRef}
+              onCameraReady={onCameraReady}
+              ratio="4:3"
+            />
+            <View style={styles.cameraOverlay}>
+              <CustomButton title="Capture" onPress={takePicture} />
+            </View>
+          </View>
+        ) : (
+          <View style={styles.previewContainer}>
+            <Image source={{ uri: capturedImage.uri }} style={styles.previewImage} />
+            <View style={styles.previewActions}>
+              <CustomButton title="Retake" onPress={retakePicture} />
+              <CustomButton title={isScanning ? 'Analyzing...' : 'Analyze'} onPress={runAnalysis} disabled={isScanning} />
+            </View>
+          </View>
+        )}
       </Card>
 
-      <CustomButton title={isScanning ? 'Scanning...' : 'Run Demo Scan'} onPress={runDemoScan} disabled={isScanning} />
       {isScanning ? <LoadingSpinner /> : null}
 
-      <Card>
-        <Text style={styles.sectionTitle}>Disposal Guidance</Text>
-        <Text style={styles.detail}>Bin: {recommendation.bin}</Text>
-        <Text style={styles.detail}>{recommendation.instruction}</Text>
-        <Text style={styles.detail}>Recyclable: {recommendation.recyclable ? 'Yes' : 'No'}</Text>
-      </Card>
+      {currentDetection && (
+        <>
+          <Card style={styles.heroCard}>
+            <Text style={styles.sectionTitle}>Detection Result</Text>
+            <Text style={styles.category}>{categoryInfo.description}</Text>
+            <Text style={styles.detail}>Category: {activeCategory}</Text>
+            <Text style={styles.detail}>Confidence: {Math.round((currentDetection.confidenceScore ?? 0) * 100)}%</Text>
+            <Text style={styles.detail}>Points: {currentDetection.pointsAwarded ?? 0}</Text>
+          </Card>
 
-      <Card>
-        <Text style={styles.sectionTitle}>Knowledge Base</Text>
-        <Text style={styles.detail}>{knowledge.description}</Text>
-        <Text style={styles.detail}>Decomposition: {knowledge.decompositionTime ?? 'Not available'}</Text>
-        <Text style={styles.detail}>Landfill impact: {knowledge.landfillImpact}</Text>
-      </Card>
+          <Card>
+            <Text style={styles.sectionTitle}>Disposal Guidance</Text>
+            <Text style={styles.detail}>Bin: {recommendation.bin}</Text>
+            <Text style={styles.detail}>{recommendation.instruction}</Text>
+            <Text style={styles.detail}>Recyclable: {recommendation.recyclable ? 'Yes' : 'No'}</Text>
+          </Card>
 
-      <Card>
-        <Text style={styles.sectionTitle}>Impact Summary</Text>
-        <Text style={styles.detail}>CO2 Saved: {impactSummary.co2SavedKg.toFixed(2)} kg</Text>
-        <Text style={styles.detail}>Waste Diverted: {impactSummary.wasteDivertedKg.toFixed(2)} kg</Text>
-        <Text style={styles.detail}>Sustainability Score: {impactSummary.sustainabilityScore}/100</Text>
-        <Text style={styles.detail}>Recycling Rate: {impactSummary.recyclingRate}%</Text>
-      </Card>
+          <Card>
+            <Text style={styles.sectionTitle}>Knowledge Base</Text>
+            <Text style={styles.detail}>{knowledge.description}</Text>
+            <Text style={styles.detail}>Decomposition: {knowledge.decompositionTime ?? 'Not available'}</Text>
+            <Text style={styles.detail}>Landfill impact: {knowledge.landfillImpact}</Text>
+          </Card>
+
+          <Card>
+            <Text style={styles.sectionTitle}>Impact Summary</Text>
+            <Text style={styles.detail}>CO2 Saved: {impactSummary.co2SavedKg.toFixed(2)} kg</Text>
+            <Text style={styles.detail}>Waste Diverted: {impactSummary.wasteDivertedKg.toFixed(2)} kg</Text>
+            <Text style={styles.detail}>Sustainability Score: {impactSummary.sustainabilityScore}/100</Text>
+            <Text style={styles.detail}>Recycling Rate: {impactSummary.recyclingRate}%</Text>
+          </Card>
+        </>
+      )}
     </ScrollView>
   );
 };
@@ -109,15 +162,60 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 12,
     backgroundColor: '#f3f7f2',
+    flexGrow: 1,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f3f7f2',
+    padding: 20,
+  },
+  message: {
+    textAlign: 'center',
+    marginBottom: 20,
+    fontSize: 16,
+    color: '#2d4137',
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
     color: '#1f3d2b',
   },
-  subtitle: {
-    color: '#4b6354',
-    lineHeight: 20,
+  cameraCard: {
+    padding: 0,
+    overflow: 'hidden',
+    backgroundColor: '#000',
+  },
+  cameraContainer: {
+    height: 400,
+    position: 'relative',
+  },
+  camera: {
+    flex: 1,
+  },
+  cameraOverlay: {
+    position: 'absolute',
+    bottom: 20,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  previewContainer: {
+    height: 400,
+    position: 'relative',
+  },
+  previewImage: {
+    flex: 1,
+    resizeMode: 'cover',
+  },
+  previewActions: {
+    position: 'absolute',
+    bottom: 20,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
   },
   heroCard: {
     backgroundColor: '#e8f5e9',

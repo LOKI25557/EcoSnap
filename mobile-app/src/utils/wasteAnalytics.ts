@@ -132,7 +132,7 @@ export const wasteAnalytics = {
   analyzeComposition: (items: WasteItem[]): CategoryAnalytics[] => {
     if (items.length === 0) return [];
 
-    const categoryMap: Record<WasteCategory, { count: number; totalConfidence: number }> = {};
+    const categoryMap = {} as Record<WasteCategory, { count: number; totalConfidence: number }>;
 
     items.forEach(item => {
       if (!categoryMap[item.category]) {

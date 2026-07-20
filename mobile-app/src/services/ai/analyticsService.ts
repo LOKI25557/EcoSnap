@@ -218,7 +218,7 @@ export const analyticsService = {
    * const report = await analyticsService.getUserImpact('user123', items);
    * console.log(`Total impact: ${report.co2SavedKg} kg CO2, ${report.totalPointsEarned} points`);
    */
-  getUserImpact: async (userId: string, items: WasteItem[] = []): Promise<UserImpactReport> => {
+  getUserImpact: (userId: string, items: WasteItem[] = []): UserImpactReport => {
     const co2Saved = analyticsService.calculateCO2Saved(items);
     const wasteDiverted = analyticsService.calculateWasteDiverted(items);
     const sustainabilityScore = analyticsService.calculateSustainabilityScore(items);
@@ -234,7 +234,7 @@ export const analyticsService = {
 
     // Build category breakdown
     const categoryBreakdown: Record<WasteCategory, CategoryStats> = {} as Record<WasteCategory, CategoryStats>;
-    const categoryTotals: Record<WasteCategory, { count: number; weight: number; co2: number; points: number }> = {};
+    const categoryTotals = {} as Record<WasteCategory, { count: number; weight: number; co2: number; points: number }>;
 
     items.forEach(item => {
       const coeff = IMPACT_COEFFICIENTS[item.category];

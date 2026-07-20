@@ -240,7 +240,7 @@ export const recommendationService = {
    *   WasteCategory.ORGANIC,
    * ]);
    */
-  getTips: async (userId: string, recentCategories: WasteCategory[] = []): Promise<string[]> => {
+  getTips: (userId: string, recentCategories: WasteCategory[] = []): string[] => {
     // TODO: Extend with persistent user tracking:
     // 1. Fetch user's waste history from database
     // 2. Compute category frequency and trends

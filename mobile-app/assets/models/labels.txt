@@ -1,0 +1,8 @@
+Plastic
+Paper
+Glass
+Metal
+Cardboard
+Organic
+Battery
+E-Waste

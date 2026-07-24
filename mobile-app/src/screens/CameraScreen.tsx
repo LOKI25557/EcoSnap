@@ -58,7 +58,7 @@ const CameraScreen = () => {
         pointsAwarded: calculateScore(response.result.primaryCategory),
       };
       addScan(scannedItem);
-      
+
       setCurrentDetection(response);
     } catch (error) {
       if (error instanceof DetectionError) {

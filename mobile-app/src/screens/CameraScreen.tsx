@@ -1,24 +1,22 @@
-import React, { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View, Image } from 'react-native';
+import React, { useState } from 'react';
+import { ScrollView, StyleSheet, Text, View, Image, Alert } from 'react-native';
 import { Camera, CameraType } from 'expo-camera';
 import Card from '../components/Card';
 import CustomButton from '../components/CustomButton';
 import LoadingSpinner from '../components/LoadingSpinner';
+import DetectionCard from '../components/DetectionCard';
 import { useApp } from '../context/AppContext';
-import { WasteCategory, WASTE_CATEGORIES_INFO } from '../constants/wasteCategories';
-import { detectionService } from '../services/ai/detectionService';
-import { recommendationService } from '../services/ai/recommendationService';
-import { analyticsService } from '../services/ai/analyticsService';
-import { recyclingKnowledgeBase } from '../utils/recyclingKnowledgeBase';
+import { detectionService, DetectionError } from '../services/ai/detectionService';
+import { detectionHistoryService } from '../services/history/DetectionHistoryService';
 import { calculateScore } from '../utils/calculateScore';
-import { formatDate } from '../utils/formatDate';
 import { WasteItem } from '../types/WasteItem';
 import { useCamera } from '../hooks/useCamera';
+import { DetectionResponse } from '../types/DetectionResult';
 
 const CameraScreen = () => {
-  const { addScan, latestScan } = useApp();
+  const { addScan } = useApp();
   const [isScanning, setIsScanning] = useState(false);
-  const [currentDetection, setCurrentDetection] = useState<WasteItem | null>(latestScan);
+  const [currentDetection, setCurrentDetection] = useState<DetectionResponse | null>(null);
 
   const {
     permission,
@@ -30,47 +28,49 @@ const CameraScreen = () => {
     onCameraReady,
   } = useCamera();
 
-  const activeCategory = currentDetection?.category ?? WasteCategory.UNKNOWN;
-  const categoryInfo = WASTE_CATEGORIES_INFO[activeCategory];
-  const recommendation = useMemo(
-    () => recommendationService.getBinRecommendation(activeCategory),
-    [activeCategory]
-  );
-  const knowledge = useMemo(
-    () => recyclingKnowledgeBase.getKnowledge(activeCategory),
-    [activeCategory]
-  );
+  const handleRetake = () => {
+    setCurrentDetection(null);
+    retakePicture();
+  };
 
   const runAnalysis = async () => {
     if (!capturedImage) return;
     setIsScanning(true);
+    setCurrentDetection(null);
 
     try {
-      // NOTE: In Step 5, this will be replaced with real TFLite inference.
-      const detection = await detectionService.detectWaste(capturedImage.uri);
+      const response = await detectionService.detectWaste(capturedImage.uri, {
+        width: capturedImage.width,
+        height: capturedImage.height,
+      });
+
+      // Save to detection history
+      await detectionHistoryService.saveDetection(response, capturedImage.uri);
+
+      // Backwards compatibility with existing WasteItem logic for Analytics
       const scannedItem: WasteItem = {
         id: `scan-${Date.now()}`,
         userId: 'demo-user',
-        category: detection.category,
-        confidenceScore: detection.confidence,
+        category: response.result.primaryCategory,
+        confidenceScore: response.result.confidence,
         imageUrl: capturedImage.uri,
-        detectedAt: new Date(),
-        pointsAwarded: calculateScore(detection.category),
+        detectedAt: new Date(response.metadata.timestamp),
+        pointsAwarded: calculateScore(response.result.primaryCategory),
       };
-
       addScan(scannedItem);
-      setCurrentDetection(scannedItem);
+
+      setCurrentDetection(response);
     } catch (error) {
+      if (error instanceof DetectionError) {
+        Alert.alert('Detection Failed', error.message);
+      } else {
+        Alert.alert('Error', 'An unexpected error occurred during analysis.');
+      }
       console.error('Failed to run scan:', error);
     } finally {
       setIsScanning(false);
     }
   };
-
-  const impactSummary = useMemo(() => {
-    const items = currentDetection ? [currentDetection] : [];
-    return analyticsService.getUserImpact('demo-user', items);
-  }, [currentDetection]);
 
   if (!permission) {
     return (
@@ -111,7 +111,7 @@ const CameraScreen = () => {
           <View style={styles.previewContainer}>
             <Image source={{ uri: capturedImage.uri }} style={styles.previewImage} />
             <View style={styles.previewActions}>
-              <CustomButton title="Retake" onPress={retakePicture} />
+              <CustomButton title="Retake" onPress={handleRetake} />
               <CustomButton title={isScanning ? 'Analyzing...' : 'Analyze'} onPress={runAnalysis} disabled={isScanning} />
             </View>
           </View>
@@ -121,37 +121,7 @@ const CameraScreen = () => {
       {isScanning ? <LoadingSpinner /> : null}
 
       {currentDetection && (
-        <>
-          <Card style={styles.heroCard}>
-            <Text style={styles.sectionTitle}>Detection Result</Text>
-            <Text style={styles.category}>{categoryInfo.description}</Text>
-            <Text style={styles.detail}>Category: {activeCategory}</Text>
-            <Text style={styles.detail}>Confidence: {Math.round((currentDetection.confidenceScore ?? 0) * 100)}%</Text>
-            <Text style={styles.detail}>Points: {currentDetection.pointsAwarded ?? 0}</Text>
-          </Card>
-
-          <Card>
-            <Text style={styles.sectionTitle}>Disposal Guidance</Text>
-            <Text style={styles.detail}>Bin: {recommendation.bin}</Text>
-            <Text style={styles.detail}>{recommendation.instruction}</Text>
-            <Text style={styles.detail}>Recyclable: {recommendation.recyclable ? 'Yes' : 'No'}</Text>
-          </Card>
-
-          <Card>
-            <Text style={styles.sectionTitle}>Knowledge Base</Text>
-            <Text style={styles.detail}>{knowledge.description}</Text>
-            <Text style={styles.detail}>Decomposition: {knowledge.decompositionTime ?? 'Not available'}</Text>
-            <Text style={styles.detail}>Landfill impact: {knowledge.landfillImpact}</Text>
-          </Card>
-
-          <Card>
-            <Text style={styles.sectionTitle}>Impact Summary</Text>
-            <Text style={styles.detail}>CO2 Saved: {impactSummary.co2SavedKg.toFixed(2)} kg</Text>
-            <Text style={styles.detail}>Waste Diverted: {impactSummary.wasteDivertedKg.toFixed(2)} kg</Text>
-            <Text style={styles.detail}>Sustainability Score: {impactSummary.sustainabilityScore}/100</Text>
-            <Text style={styles.detail}>Recycling Rate: {impactSummary.recyclingRate}%</Text>
-          </Card>
-        </>
+        <DetectionCard response={currentDetection} />
       )}
     </ScrollView>
   );
@@ -186,6 +156,7 @@ const styles = StyleSheet.create({
     padding: 0,
     overflow: 'hidden',
     backgroundColor: '#000',
+    marginBottom: 10,
   },
   cameraContainer: {
     height: 400,
@@ -216,26 +187,6 @@ const styles = StyleSheet.create({
     right: 0,
     flexDirection: 'row',
     justifyContent: 'space-evenly',
-  },
-  heroCard: {
-    backgroundColor: '#e8f5e9',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 8,
-    color: '#173224',
-  },
-  category: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
-    color: '#244b34',
-  },
-  detail: {
-    color: '#2d4137',
-    marginBottom: 6,
-    lineHeight: 20,
   },
 });
 

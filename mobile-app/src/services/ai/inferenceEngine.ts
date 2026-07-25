@@ -1,66 +1,140 @@
 import { modelLoader } from './modelLoader';
 import { imagePreprocessor } from './imagePreprocessor';
 import { WasteCategory } from '../../constants/wasteCategories';
+import { labelLoader } from './labelLoader';
 
-const MODEL_CLASS_TO_WASTE_CATEGORY: Record<number, WasteCategory> = {
-  0: WasteCategory.PLASTIC,
-  1: WasteCategory.PAPER,
-  2: WasteCategory.GLASS,
-  3: WasteCategory.METAL,
-  4: WasteCategory.PAPER, // Cardboard
-  5: WasteCategory.ORGANIC,
-  6: WasteCategory.E_WASTE, // Battery
-  7: WasteCategory.E_WASTE, // E-waste
-};
+export class InferenceError extends Error {
+  constructor(message: string, public code: string) {
+    super(message);
+    this.name = 'InferenceError';
+  }
+}
+
+function mapLabelToWasteCategory(label: string): WasteCategory {
+  if (!label) return WasteCategory.UNKNOWN;
+  
+  const normalized = label.toLowerCase().replace(/[\s_]/g, '');
+
+  switch (normalized) {
+    case 'plastic':
+    case 'plasticbottle':
+    case 'pet':
+      return WasteCategory.PLASTIC;
+    case 'paper':
+    case 'cardboard':
+      return WasteCategory.PAPER;
+    case 'glass':
+      return WasteCategory.GLASS;
+    case 'metal':
+      return WasteCategory.METAL;
+    case 'organic':
+    case 'food':
+      return WasteCategory.ORGANIC;
+    case 'ewaste':
+    case 'electronic':
+    case 'battery':
+    case 'hazardous':
+      return WasteCategory.E_WASTE;
+    default:
+      return WasteCategory.UNKNOWN;
+  }
+}
+
+export interface RawInferenceResult {
+  category: WasteCategory;
+  confidence: number;
+  confidencePercent: number;
+}
 
 export const inferenceEngine = {
   /**
-   * Run the end-to-end inference pipeline:
-   * 1. Load model
-   * 2. Preprocess image
-   * 3. Run inference
-   * 4. Post-process to find the best category
+   * Run the end-to-end inference pipeline
    */
-  async runInference(imageUri: string): Promise<{ category: WasteCategory, confidence: number, inferenceTimeMs: number }> {
-    // 1. Ensure Model is Loaded
-    const model = await modelLoader.getModel();
+  async runInference(imageUri: string): Promise<{
+    topPredictions: RawInferenceResult[],
+    inferenceTimeMs: number,
+    preprocessingTimeMs: number
+  }> {
+    try {
+      // 1. Ensure Model and Labels are Loaded
+      const [model] = await Promise.all([
+        modelLoader.getModel(),
+        labelLoader.loadLabels()
+      ]);
 
-    // 2. Preprocess the Image
-    const inputTensor = await imagePreprocessor.processImage(imageUri);
-
-    // 3. Execute Inference
-    const inferenceStartTime = performance.now();
-    // react-native-fast-tflite requires an array of input ArrayBuffers
-    const outputs = await model.run([inputTensor.buffer as ArrayBuffer]);
-    const inferenceTimeMs = performance.now() - inferenceStartTime;
-
-    if (!outputs || outputs.length === 0) {
-      throw new Error('Model returned no output');
-    }
-
-    // 4. Parse Outputs
-    // outputs[0] is ArrayBuffer
-    const confidences = new Float32Array(outputs[0] as ArrayBufferLike);
-
-    
-    let maxConfidence = 0;
-    let bestClassIndex = 0;
-
-    for (let i = 0; i < confidences.length; i++) {
-      const conf = confidences[i];
-      if (conf > maxConfidence) {
-        maxConfidence = conf;
-        bestClassIndex = i;
+      if (!model) {
+        throw new InferenceError('Model not available', 'MODEL_MISSING');
       }
+
+      // 2. Preprocess the Image
+      let inputTensor;
+      const preprocessStartTime = performance.now();
+      try {
+        inputTensor = await imagePreprocessor.processImage(imageUri);
+      } catch (e) {
+        throw new InferenceError('Failed to preprocess image', 'CORRUPTED_IMAGE');
+      }
+      
+      if (!inputTensor || !inputTensor.buffer) {
+        throw new InferenceError('Invalid tensor generated', 'INVALID_TENSOR_SIZE');
+      }
+      
+      const preprocessingTimeMs = performance.now() - preprocessStartTime;
+
+      // 3. Execute Inference
+      const inferenceStartTime = performance.now();
+      let outputs;
+      try {
+        outputs = await model.run([inputTensor.buffer as ArrayBuffer]);
+      } catch (e) {
+        throw new InferenceError('Inference execution failed or timed out', 'INFERENCE_TIMEOUT');
+      }
+      
+      const inferenceTimeMs = performance.now() - inferenceStartTime;
+
+      if (!outputs || outputs.length === 0) {
+        throw new InferenceError('Model returned no output', 'NO_OUTPUT');
+      }
+
+      // 4. Parse Outputs
+      const confidences = new Float32Array(outputs[0] as ArrayBufferLike);
+      
+      // Build array of all predictions
+      const predictions: { classIndex: number; confidence: number }[] = [];
+      for (let i = 0; i < confidences.length; i++) {
+        predictions.push({ classIndex: i, confidence: confidences[i] });
+      }
+      
+      // Sort by confidence descending
+      predictions.sort((a, b) => b.confidence - a.confidence);
+      
+      // 5. Map to App Category and Top-3
+      const top3 = predictions.slice(0, 3);
+      
+      const topPredictions: RawInferenceResult[] = top3.map(p => {
+        const labelString = labelLoader.getLabel(p.classIndex);
+        const category = mapLabelToWasteCategory(labelString);
+        const confidencePercent = parseFloat((p.confidence * 100).toFixed(1));
+        return {
+          category,
+          confidence: p.confidence,
+          confidencePercent
+        };
+      });
+
+      return {
+        topPredictions,
+        inferenceTimeMs,
+        preprocessingTimeMs
+      };
+    } catch (error) {
+      if (error instanceof InferenceError) {
+        throw error;
+      }
+      throw new InferenceError(
+        error instanceof Error ? error.message : 'Unknown inference error', 
+        'UNKNOWN_ERROR'
+      );
     }
-
-    // 5. Map to App Category
-    const category = MODEL_CLASS_TO_WASTE_CATEGORY[bestClassIndex] ?? WasteCategory.UNKNOWN;
-
-    return {
-      category,
-      confidence: maxConfidence,
-      inferenceTimeMs
-    };
   }
 };

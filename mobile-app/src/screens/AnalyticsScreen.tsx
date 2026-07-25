@@ -1,34 +1,68 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import Card from '../components/Card';
-import { useApp } from '../context/AppContext';
 import { analyticsService } from '../services/ai/analyticsService';
 import { recommendationService } from '../services/ai/recommendationService';
 import { WasteCategory } from '../constants/wasteCategories';
+import { detectionHistoryService, HistoryItem } from '../services/history/DetectionHistoryService';
+import { calculateScore } from '../utils/calculateScore';
+import { WasteItem } from '../types/WasteItem';
+import { useApp } from '../context/AppContext';
 
 const AnalyticsScreen = () => {
-  const { recentScans, clearScans } = useApp();
+  const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
+  const { clearScans } = useApp();
+
+  useFocusEffect(
+    useCallback(() => {
+      const loadHistory = async () => {
+        const items = await detectionHistoryService.getHistory();
+        setHistoryItems(items);
+      };
+      loadHistory();
+    }, [])
+  );
+
+  const handleClear = async () => {
+    await detectionHistoryService.clearHistory();
+    setHistoryItems([]);
+    clearScans(); // Clear from AppContext as well
+  };
+
+  // Convert history items to WasteItems for analyticsService compatibility
+  const mappedScans: WasteItem[] = useMemo(() => {
+    return historyItems.map(item => ({
+      id: item.id,
+      userId: 'demo-user',
+      category: item.response.result.primaryCategory,
+      confidenceScore: item.response.result.confidence,
+      imageUrl: item.imageUri,
+      detectedAt: new Date(item.response.metadata.timestamp),
+      pointsAwarded: calculateScore(item.response.result.primaryCategory),
+    }));
+  }, [historyItems]);
 
   const report = useMemo(() => {
-    return analyticsService.getUserImpact('demo-user', recentScans);
-  }, [recentScans]);
+    return analyticsService.getUserImpact('demo-user', mappedScans);
+  }, [mappedScans]);
 
   const topCategory = useMemo(() => {
-    const counts = recentScans.reduce<Record<string, number>>((acc, scan) => {
+    const counts = mappedScans.reduce<Record<string, number>>((acc, scan) => {
       acc[scan.category] = (acc[scan.category] ?? 0) + 1;
       return acc;
     }, {});
 
     return Object.entries(counts).sort(([, a], [, b]) => b - a)[0]?.[0] ?? WasteCategory.UNKNOWN;
-  }, [recentScans]);
+  }, [mappedScans]);
 
-  const topTips = recommendationService.getTips('demo-user', recentScans.map(scan => scan.category));
+  const topTips = recommendationService.getTips('demo-user', mappedScans.map(scan => scan.category));
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Impact Dashboard</Text>
       <Text style={styles.subtitle}>
-        Live summary of the recent AI scans captured in the Phase 2 flow.
+        Live summary of your AI scans and environmental impact.
       </Text>
 
       <Card>
@@ -75,8 +109,8 @@ const AnalyticsScreen = () => {
         ))}
       </Card>
 
-      <Text style={styles.reset} onPress={clearScans}>
-        Clear demo scans
+      <Text style={styles.reset} onPress={handleClear}>
+        Clear scan history
       </Text>
     </ScrollView>
   );

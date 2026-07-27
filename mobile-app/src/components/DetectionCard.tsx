@@ -7,6 +7,7 @@ import PredictionList from './PredictionList';
 import { DetectionResponse } from '../types/DetectionResult';
 import { recyclingKnowledgeBase } from '../utils/recyclingKnowledgeBase';
 import { WASTE_CATEGORIES_INFO } from '../constants/wasteCategories';
+import { NearbyRecommendations } from './maps/NearbyRecommendations';
 
 interface DetectionCardProps {
   response: DetectionResponse;
@@ -53,6 +54,8 @@ const DetectionCard: React.FC<DetectionCardProps> = ({ response }) => {
           <PredictionList predictions={result.topPredictions} />
         </Card>
       )}
+
+      <NearbyRecommendations wasteCategory={result.primaryCategory} />
 
     </ScrollView>
   );

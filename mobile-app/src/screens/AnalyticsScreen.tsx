@@ -1,23 +1,28 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, View, RefreshControl } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { ScrollView, StyleSheet, Text, View, RefreshControl, ScrollView as NativeScrollView } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { detectionHistoryService, HistoryItem } from '../services/history/DetectionHistoryService';
 import { environmentalImpactService } from '../services/dashboard/EnvironmentalImpactService';
 import { trendAnalysisService } from '../services/dashboard/TrendAnalysisService';
 import { goalService } from '../services/dashboard/GoalService';
 import { achievementService } from '../services/dashboard/AchievementService';
-import { insightService } from '../services/dashboard/InsightService';
+import { challengeService } from '../services/challenges/ChallengeService';
+import { badgeService } from '../services/badges/BadgeService';
+import { ecoPointsService } from '../services/points/EcoPointsService';
+import { personalizationService, PersonalizedInsight } from '../services/insights/PersonalizationService';
 
 // Types
 import { UserImpactReport } from '../services/ai/analyticsService';
-import { TrendData, Insight } from '../types/Dashboard';
+import { TrendData } from '../types/Dashboard';
 import { Goal } from '../types/Goal';
 import { Achievement } from '../types/Achievement';
+import { Challenge } from '../types/Challenge';
+import { Badge } from '../types/Badge';
+import { EcoPoints } from '../types/EcoPoints';
 
 // Components
 import ImpactSummaryCard from '../components/dashboard/ImpactSummaryCard';
 import GoalCard from '../components/dashboard/GoalCard';
-import InsightCard from '../components/dashboard/InsightCard';
 import TrendCard from '../components/dashboard/TrendCard';
 import ChartCard from '../components/dashboard/ChartCard';
 import ScoreCard from '../components/dashboard/ScoreCard';
@@ -25,21 +30,33 @@ import CategoryBreakdown from '../components/dashboard/CategoryBreakdown';
 import Card from '../components/Card';
 import { useApp } from '../context/AppContext';
 
+// New M6 Components
+import { EcoPointsCard } from '../components/dashboard/EcoPointsCard';
+import { StreakCard } from '../components/dashboard/StreakCard';
+import { InsightCarousel } from '../components/dashboard/InsightCarousel';
+import { ChallengeCard } from '../components/dashboard/ChallengeCard';
+import { BadgeCard } from '../components/dashboard/BadgeCard';
+import { ProgressTimeline } from '../components/dashboard/ProgressTimeline';
+
 const AnalyticsScreen = () => {
   const { clearScans } = useApp();
   const [refreshing, setRefreshing] = useState(false);
-  const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
+  
+  // States
   const [report, setReport] = useState<UserImpactReport | null>(null);
   const [trend, setTrend] = useState<TrendData | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
-  const [insights, setInsights] = useState<Insight[]>([]);
+  const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [badges, setBadges] = useState<Badge[]>([]);
+  const [points, setPoints] = useState<EcoPoints | null>(null);
+  const [insight, setInsight] = useState<PersonalizedInsight | null>(null);
 
   const loadDashboardData = async () => {
     try {
       const items = await detectionHistoryService.getHistory();
-      setHistoryItems(items);
 
+      // Legacy Services
       const impact = environmentalImpactService.getComprehensiveImpact(items);
       setReport(impact);
 
@@ -52,8 +69,19 @@ const AnalyticsScreen = () => {
       const updatedAchievements = await achievementService.evaluateAchievements(items);
       setAchievements(updatedAchievements);
 
-      const generatedInsights = insightService.generateInsights(items);
-      setInsights(generatedInsights);
+      // New M6 Services
+      const updatedChallenges = await challengeService.evaluateChallenges(items);
+      setChallenges(updatedChallenges);
+
+      const updatedBadges = await badgeService.evaluateBadges(items);
+      setBadges(updatedBadges);
+      
+      const p = await ecoPointsService.getPoints();
+      setPoints(p);
+
+      const i = await personalizationService.generateInsights(items);
+      setInsight(i);
+      
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     }
@@ -77,7 +105,7 @@ const AnalyticsScreen = () => {
     loadDashboardData();
   };
 
-  if (!report || !trend) {
+  if (!report || !trend || !points || !insight) {
     return (
       <View style={styles.center}>
         <Text>Loading Dashboard...</Text>
@@ -85,15 +113,28 @@ const AnalyticsScreen = () => {
     );
   }
 
+  // Create timeline events from points history
+  const timelineEvents = points.history.slice(0, 5).map(h => ({
+    title: h.source.toUpperCase(),
+    subtitle: h.description,
+    date: new Date(h.timestamp).toLocaleDateString(),
+    isCompleted: true
+  }));
+
   return (
     <ScrollView 
       contentContainerStyle={styles.container}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
       <View style={styles.header}>
-        <Text style={styles.title}>Sustainability</Text>
-        <Text style={styles.subtitle}>Your environmental impact and progress.</Text>
+        <Text style={styles.title}>Dashboard</Text>
+        <Text style={styles.subtitle}>Your smart sustainability assistant.</Text>
       </View>
+
+      <EcoPointsCard points={points} />
+      <StreakCard currentStreak={trend.currentStreak} longestStreak={trend.longestStreak} />
+      
+      <InsightCarousel insight={insight} />
 
       <ScoreCard score={report.sustainabilityScore} />
 
@@ -103,19 +144,29 @@ const AnalyticsScreen = () => {
         wasteDiverted={report.wasteDivertedKg} 
       />
 
-      {insights.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Insights</Text>
-          {insights.map(insight => (
-            <InsightCard key={insight.id} insight={insight} />
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Smart Challenges</Text>
+        {challenges.map(challenge => (
+          <ChallengeCard key={challenge.id} challenge={challenge} />
+        ))}
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Badges</Text>
+        <NativeScrollView horizontal showsHorizontalScrollIndicator={false} style={{ paddingVertical: 8 }}>
+          {badges.map(badge => (
+            <BadgeCard key={badge.id} badge={badge} />
           ))}
-        </View>
-      )}
+        </NativeScrollView>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Recent Activity</Text>
+        <ProgressTimeline events={timelineEvents} />
+      </View>
 
       <TrendCard trend={trend} />
-      
       <ChartCard data={trend.dailyStats} />
-
       <CategoryBreakdown breakdown={report.categoryBreakdown as any} />
 
       <View style={styles.section}>
@@ -126,7 +177,7 @@ const AnalyticsScreen = () => {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Achievements</Text>
+        <Text style={styles.sectionTitle}>Legacy Achievements</Text>
         <Card>
           {achievements.map((ach, index) => (
             <View key={ach.id} style={[styles.achievementRow, index !== 0 && styles.achievementBorder]}>

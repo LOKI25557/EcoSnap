@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import { safeAsyncStorageRead } from '../../utils/safeStorage';
 export interface LocationAnalytics {
   visits: number;
   navigationClicks: number;
@@ -32,14 +32,7 @@ class LocationAnalyticsServiceImpl {
   }
 
   private async loadAnalytics() {
-    try {
-      const data = await AsyncStorage.getItem(ANALYTICS_STORAGE_KEY);
-      if (data) {
-        this.analytics = JSON.parse(data);
-      }
-    } catch (error) {
-      console.error('Failed to load location analytics', error);
-    }
+    this.analytics = await safeAsyncStorageRead<LocationAnalytics>(ANALYTICS_STORAGE_KEY, this.analytics);
   }
 
   private async saveAnalytics() {

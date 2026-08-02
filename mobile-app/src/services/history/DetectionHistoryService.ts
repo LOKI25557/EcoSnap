@@ -1,7 +1,7 @@
 import * as FileSystem from 'expo-file-system';
 import { DetectionResponse } from '../../types/DetectionResult';
 import { WasteCategory } from '../../constants/wasteCategories';
-
+import { safeFileSystemRead } from '../../utils/safeStorage';
 const HISTORY_FILE_PATH = FileSystem.documentDirectory + 'detection_history.json';
 
 export interface HistoryItem {
@@ -27,20 +27,8 @@ class DetectionHistoryService {
       return this.historyCache;
     }
 
-    try {
-      const info = await FileSystem.getInfoAsync(HISTORY_FILE_PATH);
-      if (!info.exists) {
-        this.historyCache = [];
-        return this.historyCache;
-      }
-
-      const content = await FileSystem.readAsStringAsync(HISTORY_FILE_PATH);
-      this.historyCache = JSON.parse(content) as HistoryItem[];
-      return this.historyCache;
-    } catch (error) {
-      console.error('Failed to read history file', error);
-      return [];
-    }
+    this.historyCache = await safeFileSystemRead<HistoryItem[]>(HISTORY_FILE_PATH, []);
+    return this.historyCache;
   }
 
   /**

@@ -2,7 +2,7 @@ import * as FileSystem from 'expo-file-system';
 import { WasteCategory } from '../../constants/wasteCategories';
 import { WasteItem } from '../../types/WasteItem';
 import { analyticsService } from '../ai/analyticsService';
-
+import { safeFileSystemRead } from '../../utils/safeStorage';
 const STATS_FILE_PATH = FileSystem.documentDirectory + 'user_statistics.json';
 
 export interface UserStatistics {
@@ -49,20 +49,8 @@ class UserStatisticsService {
       return this.statsCache;
     }
 
-    try {
-      const info = await FileSystem.getInfoAsync(STATS_FILE_PATH);
-      if (!info.exists) {
-        this.statsCache = { ...DEFAULT_STATS };
-        return this.statsCache;
-      }
-
-      const content = await FileSystem.readAsStringAsync(STATS_FILE_PATH);
-      this.statsCache = JSON.parse(content) as UserStatistics;
-      return this.statsCache;
-    } catch (error) {
-      console.error('Failed to read user statistics file', error);
-      return { ...DEFAULT_STATS };
-    }
+    this.statsCache = await safeFileSystemRead<UserStatistics>(STATS_FILE_PATH, { ...DEFAULT_STATS });
+    return this.statsCache;
   }
 
   async recordScan(item: WasteItem): Promise<UserStatistics> {

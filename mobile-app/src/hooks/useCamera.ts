@@ -1,9 +1,9 @@
 import { useState, useRef } from 'react';
-import { Camera, CameraCapturedPicture } from 'expo-camera';
+import { CameraView, CameraCapturedPicture, useCameraPermissions } from 'expo-camera';
 
 export const useCamera = () => {
-  const [permission, requestPermission] = Camera.useCameraPermissions();
-  const cameraRef = useRef<Camera>(null);
+  const [permission, requestPermission] = useCameraPermissions();
+  const cameraRef = useRef<CameraView>(null);
   const [capturedImage, setCapturedImage] = useState<CameraCapturedPicture | null>(null);
   const [isCameraReady, setIsCameraReady] = useState(false);
 
@@ -14,7 +14,7 @@ export const useCamera = () => {
           quality: 0.8,
           base64: false,
         });
-        setCapturedImage(photo);
+        setCapturedImage(photo || null);
         return photo;
       } catch (error) {
         console.error('Failed to take picture:', error);

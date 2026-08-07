@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View, Image, Alert } from 'react-native';
-import { Camera, CameraType } from 'expo-camera';
+import { CameraView } from 'expo-camera';
 import Card from '../components/Card';
 import CustomButton from '../components/CustomButton';
 import LoadingState from '../components/common/LoadingState';
@@ -96,12 +96,11 @@ const CameraScreen = () => {
       <Card style={styles.cameraCard}>
         {!capturedImage ? (
           <View style={styles.cameraContainer}>
-            <Camera
+            <CameraView
               style={styles.camera}
-              type={CameraType.back}
+              facing="back"
               ref={cameraRef}
               onCameraReady={onCameraReady}
-              ratio="4:3"
             />
             <View style={styles.cameraOverlay}>
               <CustomButton title="Capture" onPress={takePicture} />

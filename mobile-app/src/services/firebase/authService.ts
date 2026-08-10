@@ -1,10 +1,20 @@
 import { auth } from './firebaseConfig';
-import { createUserWithEmailAndPassword, updateProfile, User as FirebaseUser } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPassword, User as FirebaseUser } from 'firebase/auth';
 import { mapAuthError } from '../../utils/authErrors';
 
 // TODO: Implement Firebase Authentication methods
 export const authService = {
-  login: async () => { /* TODO */ },
+  login: async (email: string, password: string): Promise<FirebaseUser> => {
+    if (!email || !password) {
+      throw new Error('Email and password are required.');
+    }
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      return userCredential.user;
+    } catch (error) {
+      throw mapAuthError(error);
+    }
+  },
   register: async (email: string, password: string, name: string): Promise<FirebaseUser> => {
     if (!email || !password || !name) {
       throw new Error('Email, password, and name are required.');

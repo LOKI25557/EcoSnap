@@ -1,3 +1,5 @@
+import { db } from './firebaseConfig';
+
 // TODO: Implement Firestore CRUD methods
 export const firestoreService = {
   getDocument: async (collection: string, id: string) => { /* TODO */ },
@@ -5,3 +7,4 @@ export const firestoreService = {
   updateDocument: async (collection: string, id: string, data: any) => { /* TODO */ },
   deleteDocument: async (collection: string, id: string) => { /* TODO */ },
 };
+

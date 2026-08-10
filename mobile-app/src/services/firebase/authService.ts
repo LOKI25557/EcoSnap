@@ -1,3 +1,5 @@
+import { auth } from './firebaseConfig';
+
 // TODO: Implement Firebase Authentication methods
 export const authService = {
   login: async () => { /* TODO */ },
@@ -5,3 +7,4 @@ export const authService = {
   logout: async () => { /* TODO */ },
   getCurrentUser: () => { /* TODO */ return null; },
 };
+

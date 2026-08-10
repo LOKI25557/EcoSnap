@@ -1,5 +1,5 @@
 import { auth } from './firebaseConfig';
-import { createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPassword, signOut, onAuthStateChanged, Unsubscribe, User as FirebaseUser } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, Unsubscribe, User as FirebaseUser } from 'firebase/auth';
 import { mapAuthError } from '../../utils/authErrors';
 
 // TODO: Implement Firebase Authentication methods
@@ -42,6 +42,16 @@ export const authService = {
   },
   onAuthStateChanged: (callback: (user: FirebaseUser | null) => void): Unsubscribe => {
     return onAuthStateChanged(auth, callback);
+  },
+  resetPassword: async (email: string): Promise<void> => {
+    if (!email) {
+      throw new Error('Email is required.');
+    }
+    try {
+      await sendPasswordResetEmail(auth, email);
+    } catch (error) {
+      throw mapAuthError(error);
+    }
   },
 };
 

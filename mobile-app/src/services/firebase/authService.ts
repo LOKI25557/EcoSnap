@@ -1,6 +1,7 @@
 import { auth } from './firebaseConfig';
 import { createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, Unsubscribe, User as FirebaseUser } from 'firebase/auth';
 import { mapAuthError } from '../../utils/authErrors';
+import { firestoreService } from './firestoreService';
 
 // TODO: Implement Firebase Authentication methods
 export const authService = {
@@ -24,6 +25,12 @@ export const authService = {
       const user = userCredential.user;
       
       await updateProfile(user, { displayName: name });
+      
+      // Create user profile in Firestore
+      await firestoreService.createUserProfile(user.uid, {
+        email: user.email || email,
+        displayName: name,
+      });
       
       return user;
     } catch (error) {

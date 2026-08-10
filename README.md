@@ -22,7 +22,7 @@ EcoSnap is an AI-powered smart waste management and recycling assistant that hel
 - **Phase 0:** Project scaffolding and foundation (Current)
 - **Phase 1:** Core UI and Firebase integration
 - **Phase 2:** AI model integration and camera functionality
-- **Phase 3:** Maps and community features
+- **Phase 3:** Maps and community features for further development
 
 ## Branch Strategy
 - `main` - Production ready code
@@ -33,4 +33,4 @@ EcoSnap is an AI-powered smart waste management and recycling assistant that hel
 - AI Waste Detection
 - Google Maps Integration for Recycling Centers
 - User Authentication & Profiles
-- Community Reporting System
+- Community Reporting System and development

@@ -1,0 +1,44 @@
+[
+  {
+    "id": "1",
+    "name": "Green Earth Recycling Center",
+    "coordinate": {
+      "latitude": 37.7749,
+      "longitude": -122.4194
+    },
+    "address": "123 Eco Way, San Francisco, CA 94102",
+    "acceptedMaterials": ["plastic", "glass", "paper", "cardboard"],
+    "openingHours": "Mon-Fri: 8AM-5PM, Sat: 9AM-2PM",
+    "rating": 4.5,
+    "contactNumber": "+1 415-555-0101",
+    "website": "https://example.com/greenearth"
+  },
+  {
+    "id": "2",
+    "name": "E-Waste Solutions",
+    "coordinate": {
+      "latitude": 37.7849,
+      "longitude": -122.4094
+    },
+    "address": "456 Tech Blvd, San Francisco, CA 94105",
+    "acceptedMaterials": ["electronic", "battery", "metal"],
+    "openingHours": "Mon-Sat: 10AM-6PM",
+    "rating": 4.8,
+    "contactNumber": "+1 415-555-0202",
+    "website": "https://example.com/ewastesolutions"
+  },
+  {
+    "id": "3",
+    "name": "City Compost & Yard Waste",
+    "coordinate": {
+      "latitude": 37.7649,
+      "longitude": -122.4294
+    },
+    "address": "789 Nature Ln, San Francisco, CA 94103",
+    "acceptedMaterials": ["organic", "compost", "wood"],
+    "openingHours": "Tue-Sun: 7AM-3PM",
+    "rating": 4.2,
+    "contactNumber": "+1 415-555-0303",
+    "website": "https://example.com/citycompost"
+  }
+]

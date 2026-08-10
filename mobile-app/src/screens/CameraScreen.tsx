@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, View, Image, Alert } from 'react-native';
 import { Camera, CameraType } from 'expo-camera';
 import Card from '../components/Card';
 import CustomButton from '../components/CustomButton';
-import LoadingSpinner from '../components/LoadingSpinner';
+import LoadingState from '../components/common/LoadingState';
 import DetectionCard from '../components/DetectionCard';
 import { useApp } from '../context/AppContext';
 import { detectionService, DetectionError } from '../services/ai/detectionService';
@@ -75,7 +75,7 @@ const CameraScreen = () => {
   if (!permission) {
     return (
       <View style={styles.centerContainer}>
-        <LoadingSpinner />
+        <LoadingState message="Requesting camera permission..." />
       </View>
     );
   }
@@ -118,7 +118,7 @@ const CameraScreen = () => {
         )}
       </Card>
 
-      {isScanning ? <LoadingSpinner /> : null}
+      {isScanning ? <LoadingState message="Analyzing waste..." /> : null}
 
       {currentDetection && (
         <DetectionCard response={currentDetection} />

@@ -1,5 +1,5 @@
 import { auth } from './firebaseConfig';
-import { createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPassword, signOut, User as FirebaseUser } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPassword, signOut, onAuthStateChanged, Unsubscribe, User as FirebaseUser } from 'firebase/auth';
 import { mapAuthError } from '../../utils/authErrors';
 
 // TODO: Implement Firebase Authentication methods
@@ -39,6 +39,9 @@ export const authService = {
   },
   getCurrentUser: (): FirebaseUser | null => {
     return auth.currentUser;
+  },
+  onAuthStateChanged: (callback: (user: FirebaseUser | null) => void): Unsubscribe => {
+    return onAuthStateChanged(auth, callback);
   },
 };
 

@@ -3,7 +3,7 @@ import { createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPasswo
 import { mapAuthError } from '../../utils/authErrors';
 import { firestoreService } from './firestoreService';
 
-// TODO: Implement Firebase Authentication methods
+// Firebase Authentication service layer
 export const authService = {
   login: async (email: string, password: string): Promise<FirebaseUser> => {
     if (!email || !password) {

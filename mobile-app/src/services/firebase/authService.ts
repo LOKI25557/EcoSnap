@@ -1,5 +1,5 @@
 import { auth } from './firebaseConfig';
-import { createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPassword, User as FirebaseUser } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPassword, signOut, User as FirebaseUser } from 'firebase/auth';
 import { mapAuthError } from '../../utils/authErrors';
 
 // TODO: Implement Firebase Authentication methods
@@ -30,7 +30,15 @@ export const authService = {
       throw mapAuthError(error);
     }
   },
-  logout: async () => { /* TODO */ },
-  getCurrentUser: () => { /* TODO */ return null; },
+  logout: async (): Promise<void> => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      throw mapAuthError(error);
+    }
+  },
+  getCurrentUser: (): FirebaseUser | null => {
+    return auth.currentUser;
+  },
 };
 

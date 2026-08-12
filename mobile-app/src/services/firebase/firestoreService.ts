@@ -12,9 +12,11 @@ import {
   limit,
   startAfter,
   getDocs,
-  QueryConstraint
+  QueryConstraint,
+  serverTimestamp
 } from 'firebase/firestore';
 import { User } from '../../types/User';
+import { UserProfile } from '../../types/Profile';
 
 export const COLLECTIONS = {
   USERS: 'users',
@@ -106,7 +108,7 @@ export const firestoreService = {
   },
 
   // User Profile Helpers
-  getUserProfile: async (uid: string): Promise<User | null> => {
+  getUserProfile: async (uid: string): Promise<UserProfile | null> => {
     try {
       const data = await firestoreService.getDocument<any>(COLLECTIONS.USERS, uid);
       if (!data) return null;
@@ -119,6 +121,23 @@ export const firestoreService = {
         score: data.score || 0,
         createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
         updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt || Date.now()),
+        name: data.name || data.displayName || 'Eco Warrior',
+        avatar: data.avatar || data.photoURL || '',
+        preferredLanguage: data.preferredLanguage || 'en',
+        themePreference: data.themePreference || 'system',
+        notificationPreferences: data.notificationPreferences || {
+          dailyReminders: true,
+          streakAlerts: true,
+          challenges: true,
+          quietHoursStart: '22:00',
+          quietHoursEnd: '08:00',
+        },
+        favoriteCategories: data.favoriteCategories || [],
+        dailyGoal: data.dailyGoal || 5,
+        weeklyGoal: data.weeklyGoal || 30,
+        monthlyGoal: data.monthlyGoal || 120,
+        joinedDate: data.joinedDate || Date.now(),
+        totalAchievements: data.totalAchievements || 0,
       };
     } catch (error) {
       console.error('Error fetching user profile:', error);
@@ -126,19 +145,49 @@ export const firestoreService = {
     }
   },
 
-  createUserProfile: async (uid: string, profileData: Partial<User>): Promise<void> => {
+  createUserProfile: async (uid: string, profileData: Partial<UserProfile>): Promise<void> => {
     try {
       const profile = {
         email: profileData.email,
-        displayName: profileData.displayName || '',
-        photoURL: profileData.photoURL || '',
+        displayName: profileData.displayName || profileData.name || '',
+        photoURL: profileData.photoURL || profileData.avatar || '',
         score: 0,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        name: profileData.name || profileData.displayName || 'Eco Warrior',
+        avatar: profileData.avatar || profileData.photoURL || '',
+        preferredLanguage: profileData.preferredLanguage || 'en',
+        themePreference: profileData.themePreference || 'system',
+        notificationPreferences: profileData.notificationPreferences || {
+          dailyReminders: true,
+          streakAlerts: true,
+          challenges: true,
+          quietHoursStart: '22:00',
+          quietHoursEnd: '08:00',
+        },
+        favoriteCategories: profileData.favoriteCategories || [],
+        dailyGoal: profileData.dailyGoal || 5,
+        weeklyGoal: profileData.weeklyGoal || 30,
+        monthlyGoal: profileData.monthlyGoal || 120,
+        joinedDate: profileData.joinedDate || Date.now(),
+        totalAchievements: profileData.totalAchievements || 0,
       };
       await firestoreService.setDocument(COLLECTIONS.USERS, uid, profile);
     } catch (error) {
       console.error('Error creating user profile:', error);
+      throw error;
+    }
+  },
+
+  updateUserProfile: async (uid: string, profileData: Partial<UserProfile>): Promise<void> => {
+    try {
+      const updates = {
+        ...profileData,
+        updatedAt: serverTimestamp(),
+      };
+      await firestoreService.updateDocument(COLLECTIONS.USERS, uid, updates);
+    } catch (error) {
+      console.error('Error updating user profile:', error);
       throw error;
     }
   }

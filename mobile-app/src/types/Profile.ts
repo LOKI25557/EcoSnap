@@ -1,7 +1,7 @@
 import { User } from './User';
 import { WasteCategory } from '../constants/wasteCategories';
 
-export interface UserProfile extends Partial<User> {
+export interface UserProfile extends User {
   name: string;
   avatar: string; // URI or base64
   preferredLanguage: string;

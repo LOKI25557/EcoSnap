@@ -14,18 +14,18 @@ export const COLLECTIONS = {
 
 // Implement Firestore CRUD methods
 export const firestoreService = {
-  getDocument: async (collectionName: string, id: string) => {
+  getDocument: async <T>(collectionName: string, id: string): Promise<T | null> => {
     try {
       const docRef = doc(db, collectionName, id);
       const docSnap = await getDoc(docRef);
-      return docSnap.exists() ? docSnap.data() : null;
+      return docSnap.exists() ? (docSnap.data() as T) : null;
     } catch (error) {
-      console.error(`Error getting document from ${collectionName}:`, error);
+      console.error(`Error getting document from ${collectionName} with id ${id}:`, error);
       throw error;
     }
   },
   
-  addDocument: async (collectionName: string, data: any) => {
+  addDocument: async <T extends object>(collectionName: string, data: T): Promise<string> => {
     try {
       const docRef = doc(db, collectionName);
       await setDoc(docRef, data);
@@ -36,32 +36,32 @@ export const firestoreService = {
     }
   },
 
-  setDocument: async (collectionName: string, id: string, data: any) => {
+  setDocument: async <T extends object>(collectionName: string, id: string, data: T): Promise<void> => {
     try {
       const docRef = doc(db, collectionName, id);
       await setDoc(docRef, data, { merge: true });
     } catch (error) {
-      console.error(`Error setting document in ${collectionName}:`, error);
+      console.error(`Error setting document in ${collectionName} with id ${id}:`, error);
       throw error;
     }
   },
 
-  updateDocument: async (collectionName: string, id: string, data: any) => {
+  updateDocument: async <T extends object>(collectionName: string, id: string, data: Partial<T>): Promise<void> => {
     try {
       const docRef = doc(db, collectionName, id);
-      await updateDoc(docRef, data);
+      await updateDoc(docRef, data as any);
     } catch (error) {
-      console.error(`Error updating document in ${collectionName}:`, error);
+      console.error(`Error updating document in ${collectionName} with id ${id}:`, error);
       throw error;
     }
   },
 
-  deleteDocument: async (collectionName: string, id: string) => {
+  deleteDocument: async (collectionName: string, id: string): Promise<void> => {
     try {
       const docRef = doc(db, collectionName, id);
       await deleteDoc(docRef);
     } catch (error) {
-      console.error(`Error deleting document in ${collectionName}:`, error);
+      console.error(`Error deleting document in ${collectionName} with id ${id}:`, error);
       throw error;
     }
   },
@@ -69,7 +69,7 @@ export const firestoreService = {
   // User Profile Helpers
   getUserProfile: async (uid: string): Promise<User | null> => {
     try {
-      const data = await firestoreService.getDocument(COLLECTIONS.USERS, uid);
+      const data = await firestoreService.getDocument<any>(COLLECTIONS.USERS, uid);
       if (!data) return null;
 
       return {

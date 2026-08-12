@@ -20,6 +20,7 @@ import { UserProfile } from '../../types/Profile';
 import { WasteRecord } from '../../types/WasteRecord';
 import { PickupRequest } from '../../types/PickupRequest';
 import { CommunityReport } from '../../types/CommunityReport';
+import { Facility } from '../../types/Facility';
 
 export const COLLECTIONS = {
   USERS: 'users',
@@ -428,6 +429,59 @@ export const firestoreService = {
       await firestoreService.updateDocument(COLLECTIONS.COMMUNITY_REPORTS, id, updates);
     } catch (error) {
       console.error(`Error updating community report ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Facility Repository
+  getFacility: async (id: string): Promise<Facility | null> => {
+    try {
+      const data = await firestoreService.getDocument<any>(COLLECTIONS.FACILITIES, id);
+      if (!data) return null;
+      return {
+        id,
+        ...data,
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
+        updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt || Date.now()),
+      } as Facility;
+    } catch (error) {
+      console.error(`Error getting facility ${id}:`, error);
+      throw error;
+    }
+  },
+
+  getFacilities: async (
+    type?: string,
+    limitVal?: number,
+    startAfterDoc?: any
+  ): Promise<{ items: Facility[]; lastVisible: any | null }> => {
+    try {
+      const constraints: QueryConstraint[] = [];
+
+      if (type) {
+        constraints.push(where('type', '==', type));
+      }
+      
+      constraints.push(where('isActive', '==', true));
+      constraints.push(orderBy('name', 'asc'));
+
+      if (limitVal) {
+        constraints.push(limit(limitVal));
+      }
+      if (startAfterDoc) {
+        constraints.push(startAfter(startAfterDoc));
+      }
+
+      const result = await firestoreService.queryDocuments<any>(COLLECTIONS.FACILITIES, constraints);
+      const items = result.items.map((data) => ({
+        ...data,
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
+        updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt || Date.now()),
+      })) as Facility[];
+
+      return { items, lastVisible: result.lastVisible };
+    } catch (error) {
+      console.error('Error getting facilities:', error);
       throw error;
     }
   }

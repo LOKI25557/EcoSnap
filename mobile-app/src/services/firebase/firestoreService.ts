@@ -17,6 +17,7 @@ import {
 } from 'firebase/firestore';
 import { User } from '../../types/User';
 import { UserProfile } from '../../types/Profile';
+import { WasteRecord } from '../../types/WasteRecord';
 
 export const COLLECTIONS = {
   USERS: 'users',
@@ -188,6 +189,86 @@ export const firestoreService = {
       await firestoreService.updateDocument(COLLECTIONS.USERS, uid, updates);
     } catch (error) {
       console.error('Error updating user profile:', error);
+      throw error;
+    }
+  },
+
+  // Waste Record Repository
+  createWasteRecord: async (record: Omit<WasteRecord, 'id' | 'createdAt'>): Promise<string> => {
+    try {
+      const newRecord = {
+        ...record,
+        createdAt: serverTimestamp(),
+      };
+      return await firestoreService.addDocument(COLLECTIONS.WASTE_RECORDS, newRecord);
+    } catch (error) {
+      console.error('Error creating waste record:', error);
+      throw error;
+    }
+  },
+
+  getWasteRecord: async (id: string): Promise<WasteRecord | null> => {
+    try {
+      const data = await firestoreService.getDocument<any>(COLLECTIONS.WASTE_RECORDS, id);
+      if (!data) return null;
+      return {
+        id,
+        ...data,
+        detectedAt: data.detectedAt?.toDate ? data.detectedAt.toDate() : new Date(data.detectedAt || Date.now()),
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
+      } as WasteRecord;
+    } catch (error) {
+      console.error(`Error getting waste record ${id}:`, error);
+      throw error;
+    }
+  },
+
+  getUserWasteRecords: async (
+    userId: string,
+    limitVal?: number,
+    startAfterDoc?: any
+  ): Promise<{ items: WasteRecord[]; lastVisible: any | null }> => {
+    try {
+      const constraints: QueryConstraint[] = [
+        where('userId', '==', userId),
+        orderBy('createdAt', 'desc')
+      ];
+
+      if (limitVal) {
+        constraints.push(limit(limitVal));
+      }
+      if (startAfterDoc) {
+        constraints.push(startAfter(startAfterDoc));
+      }
+
+      const result = await firestoreService.queryDocuments<any>(COLLECTIONS.WASTE_RECORDS, constraints);
+      const items = result.items.map((data) => ({
+        ...data,
+        detectedAt: data.detectedAt?.toDate ? data.detectedAt.toDate() : new Date(data.detectedAt || Date.now()),
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
+      })) as WasteRecord[];
+
+      return { items, lastVisible: result.lastVisible };
+    } catch (error) {
+      console.error(`Error getting waste records for user ${userId}:`, error);
+      throw error;
+    }
+  },
+
+  updateWasteRecord: async (id: string, recordData: Partial<WasteRecord>): Promise<void> => {
+    try {
+      await firestoreService.updateDocument(COLLECTIONS.WASTE_RECORDS, id, recordData);
+    } catch (error) {
+      console.error(`Error updating waste record ${id}:`, error);
+      throw error;
+    }
+  },
+
+  deleteWasteRecord: async (id: string): Promise<void> => {
+    try {
+      await firestoreService.deleteDocument(COLLECTIONS.WASTE_RECORDS, id);
+    } catch (error) {
+      console.error(`Error deleting waste record ${id}:`, error);
       throw error;
     }
   }

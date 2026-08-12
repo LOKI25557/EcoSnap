@@ -21,6 +21,7 @@ import { WasteRecord } from '../../types/WasteRecord';
 import { PickupRequest } from '../../types/PickupRequest';
 import { CommunityReport } from '../../types/CommunityReport';
 import { Facility } from '../../types/Facility';
+import { Review } from '../../types/Review';
 
 export const COLLECTIONS = {
   USERS: 'users',
@@ -482,6 +483,97 @@ export const firestoreService = {
       return { items, lastVisible: result.lastVisible };
     } catch (error) {
       console.error('Error getting facilities:', error);
+      throw error;
+    }
+  },
+
+  // Reviews Repository
+  createReview: async (review: Omit<Review, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
+    try {
+      if (review.rating < 1 || review.rating > 5) {
+        throw new Error('Rating must be between 1 and 5');
+      }
+      const newReview = {
+        ...review,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+      return await firestoreService.addDocument(COLLECTIONS.REVIEWS, newReview);
+    } catch (error) {
+      console.error('Error creating review:', error);
+      throw error;
+    }
+  },
+
+  getReview: async (id: string): Promise<Review | null> => {
+    try {
+      const data = await firestoreService.getDocument<any>(COLLECTIONS.REVIEWS, id);
+      if (!data) return null;
+      return {
+        id,
+        ...data,
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
+        updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt || Date.now()),
+      } as Review;
+    } catch (error) {
+      console.error(`Error getting review ${id}:`, error);
+      throw error;
+    }
+  },
+
+  getFacilityReviews: async (
+    facilityId: string,
+    limitVal?: number,
+    startAfterDoc?: any
+  ): Promise<{ items: Review[]; lastVisible: any | null }> => {
+    try {
+      const constraints: QueryConstraint[] = [
+        where('facilityId', '==', facilityId),
+        orderBy('createdAt', 'desc')
+      ];
+
+      if (limitVal) {
+        constraints.push(limit(limitVal));
+      }
+      if (startAfterDoc) {
+        constraints.push(startAfter(startAfterDoc));
+      }
+
+      const result = await firestoreService.queryDocuments<any>(COLLECTIONS.REVIEWS, constraints);
+      const items = result.items.map((data) => ({
+        ...data,
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
+        updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt || Date.now()),
+      })) as Review[];
+
+      return { items, lastVisible: result.lastVisible };
+    } catch (error) {
+      console.error(`Error getting reviews for facility ${facilityId}:`, error);
+      throw error;
+    }
+  },
+
+  updateReview: async (id: string, reviewData: Partial<Review>): Promise<void> => {
+    try {
+      if (reviewData.rating !== undefined && (reviewData.rating < 1 || reviewData.rating > 5)) {
+        throw new Error('Rating must be between 1 and 5');
+      }
+      const updates = {
+        ...reviewData,
+        updatedAt: serverTimestamp(),
+      };
+      await firestoreService.updateDocument(COLLECTIONS.REVIEWS, id, updates);
+    } catch (error) {
+      console.error(`Error updating review ${id}:`, error);
+      throw error;
+    }
+  },
+
+  deleteReview: async (id: string): Promise<void> => {
+    try {
+      await firestoreService.deleteDocument(COLLECTIONS.REVIEWS, id);
+    } catch (error) {
+      console.error(`Error deleting review ${id}:`, error);
       throw error;
     }
   }

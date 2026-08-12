@@ -19,6 +19,7 @@ import { User } from '../../types/User';
 import { UserProfile } from '../../types/Profile';
 import { WasteRecord } from '../../types/WasteRecord';
 import { PickupRequest } from '../../types/PickupRequest';
+import { CommunityReport } from '../../types/CommunityReport';
 
 export const COLLECTIONS = {
   USERS: 'users',
@@ -348,6 +349,85 @@ export const firestoreService = {
       await firestoreService.updateDocument(COLLECTIONS.PICKUP_REQUESTS, id, updates);
     } catch (error) {
       console.error(`Error updating pickup request ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Community Report Repository
+  createCommunityReport: async (report: Omit<CommunityReport, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
+    try {
+      const newReport = {
+        ...report,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+      return await firestoreService.addDocument(COLLECTIONS.COMMUNITY_REPORTS, newReport);
+    } catch (error) {
+      console.error('Error creating community report:', error);
+      throw error;
+    }
+  },
+
+  getCommunityReport: async (id: string): Promise<CommunityReport | null> => {
+    try {
+      const data = await firestoreService.getDocument<any>(COLLECTIONS.COMMUNITY_REPORTS, id);
+      if (!data) return null;
+      return {
+        id,
+        ...data,
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
+        updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt || Date.now()),
+      } as CommunityReport;
+    } catch (error) {
+      console.error(`Error getting community report ${id}:`, error);
+      throw error;
+    }
+  },
+
+  getCommunityReports: async (
+    status?: string,
+    limitVal?: number,
+    startAfterDoc?: any
+  ): Promise<{ items: CommunityReport[]; lastVisible: any | null }> => {
+    try {
+      const constraints: QueryConstraint[] = [];
+      
+      if (status) {
+        constraints.push(where('status', '==', status));
+      }
+      
+      constraints.push(orderBy('createdAt', 'desc'));
+
+      if (limitVal) {
+        constraints.push(limit(limitVal));
+      }
+      if (startAfterDoc) {
+        constraints.push(startAfter(startAfterDoc));
+      }
+
+      const result = await firestoreService.queryDocuments<any>(COLLECTIONS.COMMUNITY_REPORTS, constraints);
+      const items = result.items.map((data) => ({
+        ...data,
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
+        updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt || Date.now()),
+      })) as CommunityReport[];
+
+      return { items, lastVisible: result.lastVisible };
+    } catch (error) {
+      console.error('Error getting community reports:', error);
+      throw error;
+    }
+  },
+
+  updateCommunityReport: async (id: string, reportData: Partial<CommunityReport>): Promise<void> => {
+    try {
+      const updates = {
+        ...reportData,
+        updatedAt: serverTimestamp(),
+      };
+      await firestoreService.updateDocument(COLLECTIONS.COMMUNITY_REPORTS, id, updates);
+    } catch (error) {
+      console.error(`Error updating community report ${id}:`, error);
       throw error;
     }
   }

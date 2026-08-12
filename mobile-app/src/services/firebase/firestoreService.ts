@@ -18,6 +18,7 @@ import {
 import { User } from '../../types/User';
 import { UserProfile } from '../../types/Profile';
 import { WasteRecord } from '../../types/WasteRecord';
+import { PickupRequest } from '../../types/PickupRequest';
 
 export const COLLECTIONS = {
   USERS: 'users',
@@ -269,6 +270,84 @@ export const firestoreService = {
       await firestoreService.deleteDocument(COLLECTIONS.WASTE_RECORDS, id);
     } catch (error) {
       console.error(`Error deleting waste record ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Pickup Request Repository
+  createPickupRequest: async (request: Omit<PickupRequest, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
+    try {
+      const newRequest = {
+        ...request,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+      return await firestoreService.addDocument(COLLECTIONS.PICKUP_REQUESTS, newRequest);
+    } catch (error) {
+      console.error('Error creating pickup request:', error);
+      throw error;
+    }
+  },
+
+  getPickupRequest: async (id: string): Promise<PickupRequest | null> => {
+    try {
+      const data = await firestoreService.getDocument<any>(COLLECTIONS.PICKUP_REQUESTS, id);
+      if (!data) return null;
+      return {
+        id,
+        ...data,
+        scheduledDate: data.scheduledDate?.toDate ? data.scheduledDate.toDate() : new Date(data.scheduledDate || Date.now()),
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
+        updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt || Date.now()),
+      } as PickupRequest;
+    } catch (error) {
+      console.error(`Error getting pickup request ${id}:`, error);
+      throw error;
+    }
+  },
+
+  getUserPickupRequests: async (
+    userId: string,
+    limitVal?: number,
+    startAfterDoc?: any
+  ): Promise<{ items: PickupRequest[]; lastVisible: any | null }> => {
+    try {
+      const constraints: QueryConstraint[] = [
+        where('userId', '==', userId),
+        orderBy('createdAt', 'desc')
+      ];
+
+      if (limitVal) {
+        constraints.push(limit(limitVal));
+      }
+      if (startAfterDoc) {
+        constraints.push(startAfter(startAfterDoc));
+      }
+
+      const result = await firestoreService.queryDocuments<any>(COLLECTIONS.PICKUP_REQUESTS, constraints);
+      const items = result.items.map((data) => ({
+        ...data,
+        scheduledDate: data.scheduledDate?.toDate ? data.scheduledDate.toDate() : new Date(data.scheduledDate || Date.now()),
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
+        updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt || Date.now()),
+      })) as PickupRequest[];
+
+      return { items, lastVisible: result.lastVisible };
+    } catch (error) {
+      console.error(`Error getting pickup requests for user ${userId}:`, error);
+      throw error;
+    }
+  },
+
+  updatePickupRequest: async (id: string, requestData: Partial<PickupRequest>): Promise<void> => {
+    try {
+      const updates = {
+        ...requestData,
+        updatedAt: serverTimestamp(),
+      };
+      await firestoreService.updateDocument(COLLECTIONS.PICKUP_REQUESTS, id, updates);
+    } catch (error) {
+      console.error(`Error updating pickup request ${id}:`, error);
       throw error;
     }
   }

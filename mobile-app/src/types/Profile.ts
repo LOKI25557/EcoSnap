@@ -1,6 +1,7 @@
+import { User } from './User';
 import { WasteCategory } from '../constants/wasteCategories';
 
-export interface UserProfile {
+export interface UserProfile extends User {
   name: string;
   avatar: string; // URI or base64
   preferredLanguage: string;

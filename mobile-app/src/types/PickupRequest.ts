@@ -1,16 +1,16 @@
-export type PickupStatus = 'PENDING' | 'ACCEPTED' | 'COMPLETED' | 'CANCELLED';
+export type PickupStatus = 'pending' | 'scheduled' | 'assigned' | 'picked_up' | 'completed' | 'cancelled';
 
 export interface PickupRequest {
   id: string;
   userId: string;
-  location: {
-    latitude: number;
-    longitude: number;
-    address: string;
-  };
-  wasteCategories: string[];
+  wasteType: string;
+  quantity: string;
+  pickupAddress: string;
+  latitude?: number;
+  longitude?: number;
+  scheduledDate: Date;
   status: PickupStatus;
-  requestedAt: Date;
-  scheduledFor?: Date;
+  createdAt: Date;
+  updatedAt: Date;
   notes?: string;
 }

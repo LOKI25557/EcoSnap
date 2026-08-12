@@ -1,12 +1,16 @@
+export type CommunityReportType = 'illegal_dumping' | 'overflowing_bin' | 'waste_accumulation' | 'recycling_issue' | 'other';
+export type CommunityReportStatus = 'pending' | 'resolved' | 'investigating' | 'dismissed';
+
 export interface CommunityReport {
   id: string;
   userId: string;
-  location: {
-    latitude: number;
-    longitude: number;
-  };
+  type: CommunityReportType;
   description: string;
+  latitude: number;
+  longitude: number;
+  address?: string;
+  status: CommunityReportStatus;
   imageUrl?: string;
-  resolved: boolean;
   createdAt: Date;
+  updatedAt: Date;
 }

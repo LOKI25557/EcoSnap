@@ -5,6 +5,13 @@ import { WasteCategory } from '../../constants/wasteCategories';
 const PROFILE_FILE_PATH = FileSystem.documentDirectory + 'user_profile.json';
 
 const DEFAULT_PROFILE: UserProfile = {
+  id: '',
+  email: '',
+  displayName: 'Eco Warrior',
+  photoURL: '',
+  score: 0,
+  createdAt: new Date(),
+  updatedAt: new Date(),
   name: 'Eco Warrior',
   avatar: '',
   preferredLanguage: 'en',

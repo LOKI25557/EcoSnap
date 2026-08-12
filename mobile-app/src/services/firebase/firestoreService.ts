@@ -2,6 +2,16 @@ import { db } from './firebaseConfig';
 import { doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { User } from '../../types/User';
 
+export const COLLECTIONS = {
+  USERS: 'users',
+  WASTE_RECORDS: 'wasteRecords',
+  PICKUP_REQUESTS: 'pickupRequests',
+  COMMUNITY_REPORTS: 'communityReports',
+  FACILITIES: 'facilities',
+  REVIEWS: 'reviews',
+  NOTIFICATIONS: 'notifications',
+} as const;
+
 // Implement Firestore CRUD methods
 export const firestoreService = {
   getDocument: async (collectionName: string, id: string) => {
@@ -59,7 +69,7 @@ export const firestoreService = {
   // User Profile Helpers
   getUserProfile: async (uid: string): Promise<User | null> => {
     try {
-      const data = await firestoreService.getDocument('users', uid);
+      const data = await firestoreService.getDocument(COLLECTIONS.USERS, uid);
       if (!data) return null;
 
       return {
@@ -87,7 +97,7 @@ export const firestoreService = {
         createdAt: new Date(),
         updatedAt: new Date(),
       };
-      await firestoreService.setDocument('users', uid, profile);
+      await firestoreService.setDocument(COLLECTIONS.USERS, uid, profile);
     } catch (error) {
       console.error('Error creating user profile:', error);
       throw error;

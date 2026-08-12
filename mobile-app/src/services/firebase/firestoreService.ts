@@ -1,5 +1,19 @@
 import { db } from './firebaseConfig';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { 
+  doc, 
+  getDoc, 
+  setDoc, 
+  updateDoc, 
+  deleteDoc,
+  collection,
+  query,
+  where,
+  orderBy,
+  limit,
+  startAfter,
+  getDocs,
+  QueryConstraint
+} from 'firebase/firestore';
 import { User } from '../../types/User';
 
 export const COLLECTIONS = {
@@ -62,6 +76,31 @@ export const firestoreService = {
       await deleteDoc(docRef);
     } catch (error) {
       console.error(`Error deleting document in ${collectionName} with id ${id}:`, error);
+      throw error;
+    }
+  },
+
+  queryDocuments: async <T>(
+    collectionName: string,
+    constraints: QueryConstraint[]
+  ): Promise<{ items: T[]; lastVisible: any | null }> => {
+    try {
+      const colRef = collection(db, collectionName);
+      const q = query(colRef, ...constraints);
+      const querySnapshot = await getDocs(q);
+      
+      const items: T[] = [];
+      querySnapshot.forEach((docSnap) => {
+        items.push({
+          id: docSnap.id,
+          ...docSnap.data()
+        } as T);
+      });
+
+      const lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1] || null;
+      return { items, lastVisible };
+    } catch (error) {
+      console.error(`Error querying documents from ${collectionName}:`, error);
       throw error;
     }
   },

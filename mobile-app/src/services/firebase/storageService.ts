@@ -1,6 +1,7 @@
 import { storage } from './firebaseConfig';
 import { ref, uploadBytes, getDownloadURL as firebaseGetDownloadURL } from 'firebase/storage';
 import { StorageUploadOptions, StorageResult } from '../../types/storage';
+import { getProfilePath, sanitizeFileName } from '../../utils/storagePaths';
 
 export const storageService = {
   /**
@@ -43,6 +44,27 @@ export const storageService = {
     } catch (error: any) {
       console.error(`Error uploading file to ${path}:`, error);
       throw new Error(`Upload failed: ${error.message || error}`);
+    }
+  },
+
+  /**
+   * Uploads a profile image for a specific user.
+   * Path: users/{uid}/profile/{filename}
+   */
+  uploadProfileImage: async (uid: string, fileUri: string): Promise<StorageResult> => {
+    try {
+      if (!uid) throw new Error('User ID is required');
+      if (!fileUri) throw new Error('File URI is required');
+
+      const originalFileName = fileUri.split('/').pop() || 'profile.jpg';
+      const cleanFileName = sanitizeFileName(originalFileName);
+      const uniqueFileName = `${Date.now()}_${cleanFileName}`;
+      const path = getProfilePath(uid, uniqueFileName);
+
+      return await storageService.uploadFile(path, fileUri);
+    } catch (error: any) {
+      console.error(`Error uploading profile image for user ${uid}:`, error);
+      throw error;
     }
   },
 

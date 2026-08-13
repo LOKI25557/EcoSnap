@@ -112,9 +112,25 @@ export const storageService = {
     }
   },
 
+  /**
+   * Retrieves the usable Firebase Storage download URL for a given path.
+   */
   getDownloadURL: async (path: string): Promise<string> => {
-    // Stub for now (will be implemented in Commit 7)
-    return '';
+    try {
+      if (!path) throw new Error('Path is required to get download URL');
+      const storageRef = ref(storage, path);
+      return await firebaseGetDownloadURL(storageRef);
+    } catch (error: any) {
+      console.error(`Error getting download URL for path ${path}:`, error);
+      // Map to application-friendly errors
+      if (error.code === 'storage/object-not-found') {
+        throw new Error('Requested media file does not exist');
+      }
+      if (error.code === 'storage/unauthorized') {
+        throw new Error('You do not have permission to access this media file');
+      }
+      throw new Error(`Failed to retrieve download URL: ${error.message || error}`);
+    }
   },
 
   deleteFile: async (path: string): Promise<void> => {

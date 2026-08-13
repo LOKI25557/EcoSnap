@@ -6,12 +6,11 @@ import CustomButton from '../components/CustomButton';
 import LoadingState from '../components/common/LoadingState';
 import DetectionCard from '../components/DetectionCard';
 import { useApp } from '../context/AppContext';
-import { detectionService, DetectionError } from '../services/ai/detectionService';
-import { detectionHistoryService } from '../services/history/DetectionHistoryService';
-import { calculateScore } from '../utils/calculateScore';
-import { WasteItem } from '../types/WasteItem';
+import { pipelineService } from '../services/ai/pipelineService';
+import { DetectionError } from '../services/ai/detectionService';
 import { useCamera } from '../hooks/useCamera';
 import { DetectionResponse } from '../types/DetectionResult';
+import { BarcodeScanningResult } from 'expo-camera';
 
 const CameraScreen = () => {
   const { addScan } = useApp();
@@ -33,32 +32,25 @@ const CameraScreen = () => {
     retakePicture();
   };
 
+  const handleBarcodeScanned = (result: BarcodeScanningResult) => {
+    // Only process if we are not already scanning an image
+    if (isScanning || currentDetection || capturedImage) return;
+    
+    Alert.alert('Barcode Scanned', `Type: ${result.type}\nData: ${result.data}`);
+  };
+
   const runAnalysis = async () => {
     if (!capturedImage) return;
     setIsScanning(true);
     setCurrentDetection(null);
 
     try {
-      const response = await detectionService.detectWaste(capturedImage.uri, {
+      const { response, wasteItem } = await pipelineService.processImage(capturedImage.uri, {
         width: capturedImage.width,
         height: capturedImage.height,
       });
 
-      // Save to detection history
-      await detectionHistoryService.saveDetection(response, capturedImage.uri);
-
-      // Backwards compatibility with existing WasteItem logic for Analytics
-      const scannedItem: WasteItem = {
-        id: `scan-${Date.now()}`,
-        userId: 'demo-user',
-        category: response.result.primaryCategory,
-        confidenceScore: response.result.confidence,
-        imageUrl: capturedImage.uri,
-        detectedAt: new Date(response.metadata.timestamp),
-        pointsAwarded: calculateScore(response.result.primaryCategory),
-      };
-      addScan(scannedItem);
-
+      addScan(wasteItem);
       setCurrentDetection(response);
     } catch (error) {
       if (error instanceof DetectionError) {
@@ -101,6 +93,10 @@ const CameraScreen = () => {
               facing="back"
               ref={cameraRef}
               onCameraReady={onCameraReady}
+              barcodeScannerSettings={{
+                barcodeTypes: ["qr", "ean13", "ean8", "upc_a", "upc_e"],
+              }}
+              onBarcodeScanned={handleBarcodeScanned}
             />
             <View style={styles.cameraOverlay}>
               <CustomButton title="Capture" onPress={takePicture} />

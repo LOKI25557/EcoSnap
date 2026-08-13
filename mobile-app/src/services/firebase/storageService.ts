@@ -1,5 +1,5 @@
 import { storage } from './firebaseConfig';
-import { ref, uploadBytes, getDownloadURL as firebaseGetDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL as firebaseGetDownloadURL, deleteObject } from 'firebase/storage';
 import { StorageUploadOptions, StorageResult } from '../../types/storage';
 import { getProfilePath, getWasteImagePath, getReportImagePath, sanitizeFileName } from '../../utils/storagePaths';
 
@@ -133,7 +133,49 @@ export const storageService = {
     }
   },
 
+  /**
+   * Deletes a file at the specified Storage path.
+   */
   deleteFile: async (path: string): Promise<void> => {
-    // Stub for now (will be implemented in Commit 8)
+    try {
+      if (!path) throw new Error('Path is required for file deletion');
+      const storageRef = ref(storage, path);
+      await deleteObject(storageRef);
+    } catch (error: any) {
+      // Handle missing files safely by ignoring object-not-found
+      if (error.code === 'storage/object-not-found') {
+        console.warn(`File not found for deletion at path: ${path}`);
+        return;
+      }
+      if (error.code === 'storage/unauthorized') {
+        throw new Error('You do not have permission to delete this file');
+      }
+      console.error(`Error deleting file at path ${path}:`, error);
+      throw new Error(`Failed to delete file: ${error.message || error}`);
+    }
+  },
+
+  /**
+   * Deletes a profile image.
+   */
+  deleteProfileImage: async (uid: string, fileName: string): Promise<void> => {
+    const path = getProfilePath(uid, fileName);
+    await storageService.deleteFile(path);
+  },
+
+  /**
+   * Deletes a waste image.
+   */
+  deleteWasteImage: async (uid: string, recordId: string, fileName: string): Promise<void> => {
+    const path = getWasteImagePath(uid, recordId, fileName);
+    await storageService.deleteFile(path);
+  },
+
+  /**
+   * Deletes a community report image.
+   */
+  deleteReportImage: async (uid: string, reportId: string, fileName: string): Promise<void> => {
+    const path = getReportImagePath(uid, reportId, fileName);
+    await storageService.deleteFile(path);
   },
 };

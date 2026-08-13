@@ -63,8 +63,15 @@ export const storageService = {
       const uniqueFileName = `${Date.now()}_${cleanFileName}`;
       const path = getProfilePath(uid, uniqueFileName);
 
-      // Pass the detected mimeType as contentType option
-      return await storageService.uploadFile(path, fileUri, { contentType: mimeType });
+      // Pass the detected mimeType as contentType and custom metadata
+      return await storageService.uploadFile(path, fileUri, { 
+        contentType: mimeType,
+        customMetadata: {
+          category: 'profile',
+          uploadedBy: uid,
+          source: 'ecosnap-mobile',
+        }
+      });
     } catch (error: any) {
       console.error(`Error uploading profile image for user ${uid}:`, error);
       throw error;
@@ -87,7 +94,15 @@ export const storageService = {
       const uniqueFileName = `${Date.now()}_${cleanFileName}`;
       const path = getWasteImagePath(uid, recordId, uniqueFileName);
 
-      return await storageService.uploadFile(path, fileUri, { contentType: mimeType });
+      return await storageService.uploadFile(path, fileUri, { 
+        contentType: mimeType,
+        customMetadata: {
+          category: 'waste',
+          uploadedBy: uid,
+          recordId: recordId,
+          source: 'ecosnap-mobile',
+        }
+      });
     } catch (error: any) {
       console.error(`Error uploading waste image for user ${uid} and record ${recordId}:`, error);
       throw error;
@@ -110,7 +125,15 @@ export const storageService = {
       const uniqueFileName = `${Date.now()}_${cleanFileName}`;
       const path = getReportImagePath(uid, reportId, uniqueFileName);
 
-      return await storageService.uploadFile(path, fileUri, { contentType: mimeType });
+      return await storageService.uploadFile(path, fileUri, { 
+        contentType: mimeType,
+        customMetadata: {
+          category: 'report',
+          uploadedBy: uid,
+          reportId: reportId,
+          source: 'ecosnap-mobile',
+        }
+      });
     } catch (error: any) {
       console.error(`Error uploading report image for user ${uid} and report ${reportId}:`, error);
       throw error;

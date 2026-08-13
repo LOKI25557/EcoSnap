@@ -11,6 +11,7 @@ export interface CommunityReport {
   address?: string;
   status: CommunityReportStatus;
   imageUrl?: string;
+  imagePath?: string; // Firebase storage path
   createdAt: Date;
   updatedAt: Date;
 }

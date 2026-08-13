@@ -10,5 +10,6 @@ export interface WasteRecord {
   detectedAt: Date;
   createdAt: Date;
   imageUrl?: string;
+  imagePath?: string; // Firebase storage path
   pointsAwarded?: number;
 }

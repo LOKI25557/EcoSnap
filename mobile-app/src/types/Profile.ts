@@ -4,6 +4,7 @@ import { WasteCategory } from '../constants/wasteCategories';
 export interface UserProfile extends User {
   name: string;
   avatar: string; // URI or base64
+  avatarStoragePath?: string; // Firebase storage path
   preferredLanguage: string;
   themePreference: 'light' | 'dark' | 'system';
   notificationPreferences: {

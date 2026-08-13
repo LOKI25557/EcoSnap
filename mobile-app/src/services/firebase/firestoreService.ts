@@ -129,6 +129,7 @@ export const firestoreService = {
         updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt || Date.now()),
         name: data.name || data.displayName || 'Eco Warrior',
         avatar: data.avatar || data.photoURL || '',
+        avatarStoragePath: data.avatarStoragePath || '',
         preferredLanguage: data.preferredLanguage || 'en',
         themePreference: data.themePreference || 'system',
         notificationPreferences: data.notificationPreferences || {
@@ -162,6 +163,7 @@ export const firestoreService = {
         updatedAt: serverTimestamp(),
         name: profileData.name || profileData.displayName || 'Eco Warrior',
         avatar: profileData.avatar || profileData.photoURL || '',
+        avatarStoragePath: profileData.avatarStoragePath || '',
         preferredLanguage: profileData.preferredLanguage || 'en',
         themePreference: profileData.themePreference || 'system',
         notificationPreferences: profileData.notificationPreferences || {

@@ -2,6 +2,7 @@ import { storage } from './firebaseConfig';
 import { ref, uploadBytes, getDownloadURL as firebaseGetDownloadURL, deleteObject } from 'firebase/storage';
 import { StorageUploadOptions, StorageResult } from '../../types/storage';
 import { getProfilePath, getWasteImagePath, getReportImagePath, sanitizeFileName } from '../../utils/storagePaths';
+import { validateMedia } from '../../utils/storageValidation';
 
 export const storageService = {
   /**
@@ -54,14 +55,16 @@ export const storageService = {
   uploadProfileImage: async (uid: string, fileUri: string): Promise<StorageResult> => {
     try {
       if (!uid) throw new Error('User ID is required');
-      if (!fileUri) throw new Error('File URI is required');
-
-      const originalFileName = fileUri.split('/').pop() || 'profile.jpg';
-      const cleanFileName = sanitizeFileName(originalFileName);
+      
+      // Validate media before processing
+      const { mimeType, filename } = await validateMedia(fileUri);
+      
+      const cleanFileName = sanitizeFileName(filename);
       const uniqueFileName = `${Date.now()}_${cleanFileName}`;
       const path = getProfilePath(uid, uniqueFileName);
 
-      return await storageService.uploadFile(path, fileUri);
+      // Pass the detected mimeType as contentType option
+      return await storageService.uploadFile(path, fileUri, { contentType: mimeType });
     } catch (error: any) {
       console.error(`Error uploading profile image for user ${uid}:`, error);
       throw error;
@@ -76,14 +79,15 @@ export const storageService = {
     try {
       if (!uid) throw new Error('User ID is required');
       if (!recordId) throw new Error('Record ID is required');
-      if (!fileUri) throw new Error('File URI is required');
+      
+      // Validate media before processing
+      const { mimeType, filename } = await validateMedia(fileUri);
 
-      const originalFileName = fileUri.split('/').pop() || 'waste.jpg';
-      const cleanFileName = sanitizeFileName(originalFileName);
+      const cleanFileName = sanitizeFileName(filename);
       const uniqueFileName = `${Date.now()}_${cleanFileName}`;
       const path = getWasteImagePath(uid, recordId, uniqueFileName);
 
-      return await storageService.uploadFile(path, fileUri);
+      return await storageService.uploadFile(path, fileUri, { contentType: mimeType });
     } catch (error: any) {
       console.error(`Error uploading waste image for user ${uid} and record ${recordId}:`, error);
       throw error;
@@ -98,14 +102,15 @@ export const storageService = {
     try {
       if (!uid) throw new Error('User ID is required');
       if (!reportId) throw new Error('Report ID is required');
-      if (!fileUri) throw new Error('File URI is required');
+      
+      // Validate media before processing
+      const { mimeType, filename } = await validateMedia(fileUri);
 
-      const originalFileName = fileUri.split('/').pop() || 'report.jpg';
-      const cleanFileName = sanitizeFileName(originalFileName);
+      const cleanFileName = sanitizeFileName(filename);
       const uniqueFileName = `${Date.now()}_${cleanFileName}`;
       const path = getReportImagePath(uid, reportId, uniqueFileName);
 
-      return await storageService.uploadFile(path, fileUri);
+      return await storageService.uploadFile(path, fileUri, { contentType: mimeType });
     } catch (error: any) {
       console.error(`Error uploading report image for user ${uid} and report ${reportId}:`, error);
       throw error;

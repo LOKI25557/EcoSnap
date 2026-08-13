@@ -1,7 +1,7 @@
 import { storage } from './firebaseConfig';
 import { ref, uploadBytes, getDownloadURL as firebaseGetDownloadURL } from 'firebase/storage';
 import { StorageUploadOptions, StorageResult } from '../../types/storage';
-import { getProfilePath, getWasteImagePath, sanitizeFileName } from '../../utils/storagePaths';
+import { getProfilePath, getWasteImagePath, getReportImagePath, sanitizeFileName } from '../../utils/storagePaths';
 
 export const storageService = {
   /**
@@ -86,6 +86,28 @@ export const storageService = {
       return await storageService.uploadFile(path, fileUri);
     } catch (error: any) {
       console.error(`Error uploading waste image for user ${uid} and record ${recordId}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Uploads a community report image for a specific user and report.
+   * Path: users/{uid}/reports/{reportId}/{filename}
+   */
+  uploadReportImage: async (uid: string, reportId: string, fileUri: string): Promise<StorageResult> => {
+    try {
+      if (!uid) throw new Error('User ID is required');
+      if (!reportId) throw new Error('Report ID is required');
+      if (!fileUri) throw new Error('File URI is required');
+
+      const originalFileName = fileUri.split('/').pop() || 'report.jpg';
+      const cleanFileName = sanitizeFileName(originalFileName);
+      const uniqueFileName = `${Date.now()}_${cleanFileName}`;
+      const path = getReportImagePath(uid, reportId, uniqueFileName);
+
+      return await storageService.uploadFile(path, fileUri);
+    } catch (error: any) {
+      console.error(`Error uploading report image for user ${uid} and report ${reportId}:`, error);
       throw error;
     }
   },

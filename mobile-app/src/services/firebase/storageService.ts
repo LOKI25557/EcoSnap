@@ -1,7 +1,7 @@
 import { storage } from './firebaseConfig';
 import { ref, uploadBytes, getDownloadURL as firebaseGetDownloadURL } from 'firebase/storage';
 import { StorageUploadOptions, StorageResult } from '../../types/storage';
-import { getProfilePath, sanitizeFileName } from '../../utils/storagePaths';
+import { getProfilePath, getWasteImagePath, sanitizeFileName } from '../../utils/storagePaths';
 
 export const storageService = {
   /**
@@ -64,6 +64,28 @@ export const storageService = {
       return await storageService.uploadFile(path, fileUri);
     } catch (error: any) {
       console.error(`Error uploading profile image for user ${uid}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Uploads a waste image for a specific user and waste record.
+   * Path: users/{uid}/waste/{recordId}/{filename}
+   */
+  uploadWasteImage: async (uid: string, recordId: string, fileUri: string): Promise<StorageResult> => {
+    try {
+      if (!uid) throw new Error('User ID is required');
+      if (!recordId) throw new Error('Record ID is required');
+      if (!fileUri) throw new Error('File URI is required');
+
+      const originalFileName = fileUri.split('/').pop() || 'waste.jpg';
+      const cleanFileName = sanitizeFileName(originalFileName);
+      const uniqueFileName = `${Date.now()}_${cleanFileName}`;
+      const path = getWasteImagePath(uid, recordId, uniqueFileName);
+
+      return await storageService.uploadFile(path, fileUri);
+    } catch (error: any) {
+      console.error(`Error uploading waste image for user ${uid} and record ${recordId}:`, error);
       throw error;
     }
   },

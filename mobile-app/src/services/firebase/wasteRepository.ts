@@ -1,7 +1,7 @@
-import { collection, doc, setDoc, serverTimestamp, FieldValue, getDoc, query, orderBy, getDocs } from 'firebase/firestore';
+import { collection, doc, setDoc, serverTimestamp, FieldValue, getDoc, query, orderBy, getDocs, limit, startAfter, QueryConstraint } from 'firebase/firestore';
 import { db } from './firebaseConfig';
 import { authService } from './authService';
-import { FIRESTORE_COLLECTIONS } from '../../constants/firebase';
+import { FIRESTORE_COLLECTIONS, WASTE_QUERY_DEFAULTS } from '../../constants/firebase';
 import { WasteRecord } from '../../types/WasteRecord';
 import { WasteCategory } from '../../constants/wasteCategories';
 
@@ -134,7 +134,20 @@ export const wasteRepository = {
         FIRESTORE_COLLECTIONS.WASTE_RECORDS
       );
 
-      const q = query(userWasteCol, orderBy('detectedAt', 'desc'));
+      const constraints: QueryConstraint[] = [orderBy('detectedAt', 'desc')];
+
+      // Limit configuration
+      const limitVal = params.limit !== undefined && params.limit > 0
+        ? Math.min(params.limit, WASTE_QUERY_DEFAULTS.MAX_LIMIT)
+        : WASTE_QUERY_DEFAULTS.DEFAULT_LIMIT;
+      constraints.push(limit(limitVal));
+
+      // Cursor configuration
+      if (params.cursor) {
+        constraints.push(startAfter(params.cursor));
+      }
+
+      const q = query(userWasteCol, ...constraints);
       const querySnapshot = await getDocs(q);
 
       const items: WasteRecord[] = [];
@@ -165,6 +178,7 @@ export const wasteRepository = {
       throw new Error(`Failed to query waste records: ${error.message || error}`);
     }
   },
+
 
 
   update: async (userId: string, recordId: string, data: Partial<WasteRecord>): Promise<void> => {

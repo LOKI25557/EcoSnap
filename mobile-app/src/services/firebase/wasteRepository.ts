@@ -23,8 +23,12 @@ export const validateWasteRecord = (record: Partial<WasteRecord>, isUpdate = fal
     if (record.confidence === undefined || record.confidence === null) {
       throw new Error('Missing required field: confidence');
     }
-    if (!record.binRecommendation) throw new Error('Missing required field: binRecommendation');
-    if (!record.disposalInstructions) throw new Error('Missing required field: disposalInstructions');
+    if (record.binRecommendation === undefined) {
+      throw new Error('Missing required field: binRecommendation');
+    }
+    if (record.disposalInstructions === undefined) {
+      throw new Error('Missing required field: disposalInstructions');
+    }
     if (!record.detectedAt) throw new Error('Missing required field: detectedAt');
   }
 

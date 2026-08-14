@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, serverTimestamp, FieldValue } from 'firebase/firestore';
+import { collection, doc, setDoc, serverTimestamp, FieldValue, getDoc } from 'firebase/firestore';
 import { db } from './firebaseConfig';
 import { authService } from './authService';
 import { FIRESTORE_COLLECTIONS } from '../../constants/firebase';
@@ -69,10 +69,53 @@ export const wasteRepository = {
     }
   },
 
-
   get: async (userId: string, recordId: string): Promise<WasteRecord | null> => {
-    throw new Error('Not implemented');
+    if (!userId) throw new Error('User ID is required');
+    if (!recordId) throw new Error('Record ID is required');
+
+    // Local ownership check
+    const currentUser = authService.getCurrentUser();
+    if (currentUser && currentUser.uid !== userId) {
+      throw new Error('Permission denied: Cannot access another user\'s records');
+    }
+
+    try {
+      const docRef = doc(
+        db,
+        FIRESTORE_COLLECTIONS.USERS,
+        userId,
+        FIRESTORE_COLLECTIONS.WASTE_RECORDS,
+        recordId
+      );
+
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) {
+        return null;
+      }
+
+      const data = docSnap.data();
+      return {
+        id: docSnap.id,
+        userId: data.userId,
+        category: data.category,
+        confidence: data.confidence,
+        binRecommendation: data.binRecommendation,
+        disposalInstructions: data.disposalInstructions,
+        imagePath: data.imagePath || '',
+        imageUrl: data.imageUrl || '',
+        detectedAt: data.detectedAt?.toDate ? data.detectedAt.toDate() : new Date(data.detectedAt || Date.now()),
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
+        updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt || Date.now())
+      } as WasteRecord;
+    } catch (error: any) {
+      console.error(`Error retrieving waste record ${recordId} for user ${userId}:`, error);
+      if (error.code === 'permission-denied') {
+        throw new Error('Permission denied: You do not have access to this waste record');
+      }
+      throw new Error(`Failed to retrieve waste record: ${error.message || error}`);
+    }
   },
+
 
   list: async (params: ListWasteRecordsParams): Promise<{ items: WasteRecord[]; lastVisible: any | null }> => {
     throw new Error('Not implemented');

@@ -1,6 +1,7 @@
-import { collection, doc, setDoc, serverTimestamp, FieldValue, getDoc, query, orderBy, getDocs, limit, startAfter, QueryConstraint, where } from 'firebase/firestore';
+import { collection, doc, setDoc, serverTimestamp, FieldValue, getDoc, query, orderBy, getDocs, limit, startAfter, QueryConstraint, where, deleteDoc } from 'firebase/firestore';
 import { db } from './firebaseConfig';
 import { authService } from './authService';
+import { storageService } from './storageService';
 import { FIRESTORE_COLLECTIONS, WASTE_QUERY_DEFAULTS } from '../../constants/firebase';
 import { WasteRecord } from '../../types/WasteRecord';
 import { WasteCategory } from '../../constants/wasteCategories';
@@ -199,10 +200,85 @@ export const wasteRepository = {
 
 
   update: async (userId: string, recordId: string, data: Partial<WasteRecord>): Promise<void> => {
-    throw new Error('Not implemented');
+    if (!userId) throw new Error('User ID is required');
+    if (!recordId) throw new Error('Record ID is required');
+
+    // Local ownership check
+    const currentUser = authService.getCurrentUser();
+    if (currentUser && currentUser.uid !== userId) {
+      throw new Error('Permission denied: Cannot update another user\'s records');
+    }
+
+    try {
+      const docRef = doc(
+        db,
+        FIRESTORE_COLLECTIONS.USERS,
+        userId,
+        FIRESTORE_COLLECTIONS.WASTE_RECORDS,
+        recordId
+      );
+
+      const updates: Record<string, any> = {
+        ...data,
+        updatedAt: serverTimestamp(),
+      };
+
+      // Prevent changing immutable properties
+      delete updates.id;
+      delete updates.userId;
+      delete updates.createdAt;
+
+      await setDoc(docRef, updates, { merge: true });
+    } catch (error: any) {
+      console.error(`Error updating waste record ${recordId} for user ${userId}:`, error);
+      if (error.code === 'permission-denied') {
+        throw new Error('Permission denied: You do not have access to this waste record');
+      }
+      throw new Error(`Failed to update waste record: ${error.message || error}`);
+    }
   },
 
   delete: async (userId: string, recordId: string): Promise<void> => {
-    throw new Error('Not implemented');
+    if (!userId) throw new Error('User ID is required');
+    if (!recordId) throw new Error('Record ID is required');
+
+    // Local ownership check
+    const currentUser = authService.getCurrentUser();
+    if (currentUser && currentUser.uid !== userId) {
+      throw new Error('Permission denied: Cannot delete another user\'s records');
+    }
+
+    try {
+      // Fetch record first to check for storage image
+      const record = await wasteRepository.get(userId, recordId);
+      if (!record) {
+        throw new Error('Waste record not found');
+      }
+
+      // Delete the image from Storage if it exists
+      if (record.imagePath) {
+        try {
+          await storageService.deleteFile(record.imagePath);
+        } catch (storageError) {
+          console.warn(`Failed to delete associated storage image at ${record.imagePath}:`, storageError);
+        }
+      }
+
+      const docRef = doc(
+        db,
+        FIRESTORE_COLLECTIONS.USERS,
+        userId,
+        FIRESTORE_COLLECTIONS.WASTE_RECORDS,
+        recordId
+      );
+
+      await deleteDoc(docRef);
+    } catch (error: any) {
+      console.error(`Error deleting waste record ${recordId} for user ${userId}:`, error);
+      if (error.code === 'permission-denied') {
+        throw new Error('Permission denied: You do not have access to this waste record');
+      }
+      throw new Error(`Failed to delete waste record: ${error.message || error}`);
+    }
   }
 };

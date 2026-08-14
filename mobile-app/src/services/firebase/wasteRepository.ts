@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, serverTimestamp, FieldValue, getDoc, query, orderBy, getDocs, limit, startAfter, QueryConstraint } from 'firebase/firestore';
+import { collection, doc, setDoc, serverTimestamp, FieldValue, getDoc, query, orderBy, getDocs, limit, startAfter, QueryConstraint, where } from 'firebase/firestore';
 import { db } from './firebaseConfig';
 import { authService } from './authService';
 import { FIRESTORE_COLLECTIONS, WASTE_QUERY_DEFAULTS } from '../../constants/firebase';
@@ -134,7 +134,23 @@ export const wasteRepository = {
         FIRESTORE_COLLECTIONS.WASTE_RECORDS
       );
 
-      const constraints: QueryConstraint[] = [orderBy('detectedAt', 'desc')];
+      const constraints: QueryConstraint[] = [];
+
+      // Category filter
+      if (params.category) {
+        constraints.push(where('category', '==', params.category));
+      }
+
+      // Date range filters
+      if (params.startDate) {
+        constraints.push(where('detectedAt', '>=', params.startDate));
+      }
+      if (params.endDate) {
+        constraints.push(where('detectedAt', '<=', params.endDate));
+      }
+
+      // Always order by detectedAt desc (needed for filters and default order)
+      constraints.push(orderBy('detectedAt', 'desc'));
 
       // Limit configuration
       const limitVal = params.limit !== undefined && params.limit > 0
@@ -148,6 +164,7 @@ export const wasteRepository = {
       }
 
       const q = query(userWasteCol, ...constraints);
+
       const querySnapshot = await getDocs(q);
 
       const items: WasteRecord[] = [];

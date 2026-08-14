@@ -4,8 +4,8 @@
       "collectionGroup": "wasteRecords",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "userId", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
+        { "fieldPath": "category", "order": "ASCENDING" },
+        { "fieldPath": "detectedAt", "order": "DESCENDING" }
       ]
     },
     {

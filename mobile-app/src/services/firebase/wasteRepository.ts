@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, serverTimestamp, FieldValue, getDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, serverTimestamp, FieldValue, getDoc, query, orderBy, getDocs } from 'firebase/firestore';
 import { db } from './firebaseConfig';
 import { authService } from './authService';
 import { FIRESTORE_COLLECTIONS } from '../../constants/firebase';
@@ -116,10 +116,56 @@ export const wasteRepository = {
     }
   },
 
-
   list: async (params: ListWasteRecordsParams): Promise<{ items: WasteRecord[]; lastVisible: any | null }> => {
-    throw new Error('Not implemented');
+    const { userId } = params;
+    if (!userId) throw new Error('User ID is required');
+
+    // Local ownership check
+    const currentUser = authService.getCurrentUser();
+    if (currentUser && currentUser.uid !== userId) {
+      throw new Error('Permission denied: Cannot access another user\'s records');
+    }
+
+    try {
+      const userWasteCol = collection(
+        db,
+        FIRESTORE_COLLECTIONS.USERS,
+        userId,
+        FIRESTORE_COLLECTIONS.WASTE_RECORDS
+      );
+
+      const q = query(userWasteCol, orderBy('detectedAt', 'desc'));
+      const querySnapshot = await getDocs(q);
+
+      const items: WasteRecord[] = [];
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        items.push({
+          id: docSnap.id,
+          userId: data.userId,
+          category: data.category,
+          confidence: data.confidence,
+          binRecommendation: data.binRecommendation,
+          disposalInstructions: data.disposalInstructions,
+          imagePath: data.imagePath || '',
+          imageUrl: data.imageUrl || '',
+          detectedAt: data.detectedAt?.toDate ? data.detectedAt.toDate() : new Date(data.detectedAt || Date.now()),
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
+          updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt || Date.now())
+        } as WasteRecord);
+      });
+
+      const lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1] || null;
+      return { items, lastVisible };
+    } catch (error: any) {
+      console.error(`Error querying waste records for user ${userId}:`, error);
+      if (error.code === 'permission-denied') {
+        throw new Error('Permission denied: You do not have access to these waste records');
+      }
+      throw new Error(`Failed to query waste records: ${error.message || error}`);
+    }
   },
+
 
   update: async (userId: string, recordId: string, data: Partial<WasteRecord>): Promise<void> => {
     throw new Error('Not implemented');

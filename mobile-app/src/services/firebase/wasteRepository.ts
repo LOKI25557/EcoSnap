@@ -15,20 +15,76 @@ export interface ListWasteRecordsParams {
   cursor?: any;
 }
 
-export const wasteRepository = {
-  create: async (record: Omit<WasteRecord, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
-    // Validate required fields
+export const validateWasteRecord = (record: Partial<WasteRecord>, isUpdate = false) => {
+  // If not update, check required fields
+  if (!isUpdate) {
     if (!record.userId) throw new Error('Missing required field: userId');
     if (!record.category) throw new Error('Missing required field: category');
     if (record.confidence === undefined || record.confidence === null) {
       throw new Error('Missing required field: confidence');
     }
-    if (record.confidence < 0 || record.confidence > 1) {
-      throw new Error('Confidence must be between 0 and 1');
-    }
     if (!record.binRecommendation) throw new Error('Missing required field: binRecommendation');
     if (!record.disposalInstructions) throw new Error('Missing required field: disposalInstructions');
     if (!record.detectedAt) throw new Error('Missing required field: detectedAt');
+  }
+
+  // Validate userId if present
+  if (record.userId !== undefined) {
+    if (typeof record.userId !== 'string' || record.userId.trim() === '') {
+      throw new Error('Invalid userId: must be a non-empty string');
+    }
+  }
+
+  // Validate category if present
+  if (record.category !== undefined) {
+    if (!Object.values(WasteCategory).includes(record.category)) {
+      throw new Error(`Invalid category: ${record.category}`);
+    }
+  }
+
+  // Validate confidence if present
+  if (record.confidence !== undefined) {
+    if (typeof record.confidence !== 'number' || isNaN(record.confidence) || record.confidence < 0 || record.confidence > 1) {
+      throw new Error('Confidence must be a number between 0 and 1');
+    }
+  }
+
+  // Validate detectedAt if present
+  if (record.detectedAt !== undefined) {
+    if (!(record.detectedAt instanceof Date) || isNaN(record.detectedAt.getTime())) {
+      throw new Error('Invalid detectedAt: must be a valid Date object');
+    }
+  }
+
+  // Validate image references
+  if (record.imagePath !== undefined && record.imagePath !== null) {
+    if (typeof record.imagePath !== 'string') {
+      throw new Error('Invalid imagePath: must be a string');
+    }
+  }
+  if (record.imageUrl !== undefined && record.imageUrl !== null) {
+    if (typeof record.imageUrl !== 'string') {
+      throw new Error('Invalid imageUrl: must be a string');
+    }
+  }
+
+  // Validate binRecommendation and disposalInstructions if present
+  if (record.binRecommendation !== undefined) {
+    if (typeof record.binRecommendation !== 'string' || record.binRecommendation.trim() === '') {
+      throw new Error('Invalid binRecommendation: must be a non-empty string');
+    }
+  }
+  if (record.disposalInstructions !== undefined) {
+    if (typeof record.disposalInstructions !== 'string' || record.disposalInstructions.trim() === '') {
+      throw new Error('Invalid disposalInstructions: must be a non-empty string');
+    }
+  }
+};
+
+export const wasteRepository = {
+  create: async (record: Omit<WasteRecord, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
+    // Validate the input fields
+    validateWasteRecord(record, false);
 
     // Check auth user ownership
     const currentUser = authService.getCurrentUser();
@@ -217,6 +273,9 @@ export const wasteRepository = {
         FIRESTORE_COLLECTIONS.WASTE_RECORDS,
         recordId
       );
+
+      // Validate the updates
+      validateWasteRecord(data, true);
 
       const updates: Record<string, any> = {
         ...data,

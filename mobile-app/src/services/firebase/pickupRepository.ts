@@ -242,7 +242,77 @@ export const pickupRepository = {
     newStatus: PickupStatus,
     adminOverride = false
   ): Promise<void> => {
-    // Stub for Commit 7
+    if (!userId) throw new Error('User ID is required');
+    if (!requestId) throw new Error('Request ID is required');
+
+    // Local authentication/ownership check (unless adminOverride is true)
+    const currentUser = authService.getCurrentUser();
+    if (!adminOverride) {
+      if (!currentUser) {
+        throw new Error('Unauthenticated: User must be logged in');
+      }
+      if (currentUser.uid !== userId) {
+        throw new Error('Permission denied: Cannot update status of another user\'s request');
+      }
+    }
+
+    try {
+      const docRef = doc(
+        db,
+        FIRESTORE_COLLECTIONS.USERS,
+        userId,
+        FIRESTORE_COLLECTIONS.PICKUP_REQUESTS,
+        requestId
+      );
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) {
+        throw new Error('Pickup request not found');
+      }
+
+      const data = docSnap.data();
+      const currentStatus = data.status as PickupStatus;
+
+      // 1. Check if transition is valid
+      const VALID_TRANSITIONS: Record<PickupStatus, PickupStatus[]> = {
+        pending: ['scheduled', 'cancelled'],
+        scheduled: ['assigned', 'cancelled'],
+        assigned: ['picked_up'],
+        picked_up: ['completed'],
+        completed: [],
+        cancelled: [],
+      };
+
+      if (!VALID_TRANSITIONS[currentStatus].includes(newStatus)) {
+        throw new Error(`Invalid status transition from ${currentStatus} to ${newStatus}`);
+      }
+
+      // 2. Enforce client-side status restrictions
+      if (!adminOverride && newStatus !== 'cancelled') {
+        throw new Error('Permission denied: Ordinary clients can only cancel pickup requests');
+      }
+
+      // 3. Prepare updates
+      const updates: Record<string, any> = {
+        status: newStatus,
+        updatedAt: serverTimestamp(),
+      };
+
+      if (newStatus === 'scheduled') {
+        updates.scheduledAt = serverTimestamp();
+      } else if (newStatus === 'completed') {
+        updates.completedAt = serverTimestamp();
+      } else if (newStatus === 'cancelled') {
+        updates.cancelledAt = serverTimestamp();
+      }
+
+      await setDoc(docRef, updates, { merge: true });
+    } catch (error: any) {
+      console.error(`Error updating status for pickup request ${requestId}:`, error);
+      if (error.code === 'permission-denied') {
+        throw new Error('Permission denied: You do not have permission to update this request');
+      }
+      throw new Error(`Failed to update pickup request status: ${error.message || error}`);
+    }
   },
 
   cancel: async (userId: string, requestId: string): Promise<void> => {

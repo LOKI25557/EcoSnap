@@ -12,7 +12,15 @@
       "collectionGroup": "pickupRequests",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "pickupRequests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "wasteCategory", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },

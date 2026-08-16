@@ -229,8 +229,30 @@ export const pickupRepository = {
 
       const constraints: QueryConstraint[] = [];
 
-      // Default sorting: newest first (ordered by createdAt descending)
-      constraints.push(orderBy('createdAt', 'desc'));
+      // 1. Filtering by status
+      if (params.status) {
+        constraints.push(where('status', '==', params.status));
+      }
+
+      // 2. Filtering by waste category
+      if (params.category) {
+        constraints.push(where('wasteCategory', '==', params.category));
+      }
+
+      // 3. Filtering by date range on preferredDate
+      if (params.startDate) {
+        constraints.push(where('preferredDate', '>=', params.startDate));
+      }
+      if (params.endDate) {
+        constraints.push(where('preferredDate', '<=', params.endDate));
+      }
+
+      // 4. Ordering logic
+      if (params.startDate || params.endDate) {
+        constraints.push(orderBy('preferredDate', 'asc'));
+      } else {
+        constraints.push(orderBy('createdAt', 'desc'));
+      }
 
       // Limit setup
       const limitVal = params.limit !== undefined && params.limit > 0

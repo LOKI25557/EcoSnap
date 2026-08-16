@@ -4,6 +4,77 @@ import { authService } from './authService';
 import { FIRESTORE_COLLECTIONS, PICKUP_QUERY_DEFAULTS } from '../../constants/firebase';
 import { PickupRequest, PickupStatus, PickupTimeSlot, PickupRequestInput, PickupRequestUpdate } from '../../types/PickupRequest';
 
+export const MAX_PICKUP_NOTES_LENGTH = 500;
+
+export const validatePickupRequest = (
+  input: Partial<PickupRequest | PickupRequestInput>,
+  isUpdate = false
+) => {
+  if (!isUpdate) {
+    if (!input.userId) throw new Error('Missing required field: userId');
+    if (!input.wasteRecordId) throw new Error('Missing required field: wasteRecordId');
+    if (!input.wasteCategory) throw new Error('Missing required field: wasteCategory');
+    if (!input.quantity) throw new Error('Missing required field: quantity');
+    if (!input.pickupAddress) throw new Error('Missing required field: pickupAddress');
+    if (!input.preferredDate) throw new Error('Missing required field: preferredDate');
+    if (!input.preferredTimeSlot) throw new Error('Missing required field: preferredTimeSlot');
+  }
+
+  if (input.userId !== undefined) {
+    if (typeof input.userId !== 'string' || input.userId.trim() === '') {
+      throw new Error('Invalid userId: must be a non-empty string');
+    }
+  }
+
+  if (input.wasteRecordId !== undefined) {
+    if (typeof input.wasteRecordId !== 'string' || input.wasteRecordId.trim() === '') {
+      throw new Error('Invalid wasteRecordId: must be a non-empty string');
+    }
+  }
+
+  if (input.pickupAddress !== undefined) {
+    if (typeof input.pickupAddress !== 'string' || input.pickupAddress.trim() === '') {
+      throw new Error('Invalid pickupAddress: must be a non-empty string');
+    }
+  }
+
+  if (input.quantity !== undefined) {
+    if (typeof input.quantity !== 'string' || input.quantity.trim() === '') {
+      throw new Error('Invalid quantity: must be a non-empty string');
+    }
+  }
+
+  if (input.preferredTimeSlot !== undefined) {
+    const validTimeSlots: PickupTimeSlot[] = ['morning', 'afternoon', 'evening'];
+    if (!validTimeSlots.includes(input.preferredTimeSlot as any)) {
+      throw new Error('Valid time slot is required (morning, afternoon, or evening)');
+    }
+  }
+
+  if (input.preferredDate !== undefined) {
+    const dateObj = input.preferredDate instanceof Date ? input.preferredDate : new Date(input.preferredDate);
+    if (isNaN(dateObj.getTime())) {
+      throw new Error('Preferred date is required and must be a valid Date');
+    }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const checkDate = new Date(dateObj);
+    checkDate.setHours(0, 0, 0, 0);
+    if (checkDate < today) {
+      throw new Error('Preferred date cannot be in the past');
+    }
+  }
+
+  if (input.notes !== undefined && input.notes !== null) {
+    if (typeof input.notes !== 'string') {
+      throw new Error('Notes must be a string');
+    }
+    if (input.notes.length > MAX_PICKUP_NOTES_LENGTH) {
+      throw new Error(`Notes cannot exceed ${MAX_PICKUP_NOTES_LENGTH} characters`);
+    }
+  }
+};
+
 export const pickupRepository = {
   create: async (input: PickupRequestInput): Promise<string> => {
     // 1. Authenticated user validation
@@ -16,29 +87,7 @@ export const pickupRepository = {
     }
 
     // 2. Input validations
-    if (!input.pickupAddress || input.pickupAddress.trim() === '') {
-      throw new Error('Pickup address is required');
-    }
-    if (!input.preferredDate || !(input.preferredDate instanceof Date) || isNaN(input.preferredDate.getTime())) {
-      throw new Error('Preferred date is required and must be a valid Date');
-    }
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const checkDate = new Date(input.preferredDate);
-    checkDate.setHours(0, 0, 0, 0);
-    if (checkDate < today) {
-      throw new Error('Preferred date cannot be in the past');
-    }
-    const validTimeSlots: PickupTimeSlot[] = ['morning', 'afternoon', 'evening'];
-    if (!input.preferredTimeSlot || !validTimeSlots.includes(input.preferredTimeSlot)) {
-      throw new Error('Valid time slot is required (morning, afternoon, or evening)');
-    }
-    if (!input.quantity || input.quantity.trim() === '') {
-      throw new Error('Quantity is required');
-    }
-    if (!input.wasteCategory) {
-      throw new Error('Waste category is required');
-    }
+    validatePickupRequest(input, false);
 
     // 3. Waste record ownership validation
     const wasteDocRef = doc(

@@ -158,8 +158,82 @@ export const pickupRepository = {
     limit?: number;
     cursor?: any;
   }): Promise<{ items: PickupRequest[]; lastVisible: any | null }> => {
-    // Stub for Commit 6 and 10
-    return { items: [], lastVisible: null };
+    const { userId } = params;
+    if (!userId) throw new Error('User ID is required');
+
+    // Local ownership check
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthenticated: User must be logged in');
+    }
+    if (currentUser.uid !== userId) {
+      throw new Error('Permission denied: Cannot access another user\'s pickup requests');
+    }
+
+    try {
+      const userPickupCol = collection(
+        db,
+        FIRESTORE_COLLECTIONS.USERS,
+        userId,
+        FIRESTORE_COLLECTIONS.PICKUP_REQUESTS
+      );
+
+      const constraints: QueryConstraint[] = [];
+
+      // Default sorting: newest first (ordered by createdAt descending)
+      constraints.push(orderBy('createdAt', 'desc'));
+
+      // Limit setup
+      const limitVal = params.limit !== undefined && params.limit > 0
+        ? Math.min(params.limit, PICKUP_QUERY_DEFAULTS.MAX_LIMIT)
+        : PICKUP_QUERY_DEFAULTS.DEFAULT_LIMIT;
+      constraints.push(limit(limitVal));
+
+      if (params.cursor) {
+        constraints.push(startAfter(params.cursor));
+      }
+
+      const q = query(userPickupCol, ...constraints);
+      const querySnapshot = await getDocs(q);
+
+      const toDate = (ts: any): Date | undefined => {
+        if (!ts) return undefined;
+        return ts.toDate ? ts.toDate() : new Date(ts);
+      };
+
+      const items: PickupRequest[] = [];
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        items.push({
+          id: docSnap.id,
+          userId: data.userId,
+          wasteRecordId: data.wasteRecordId,
+          wasteCategory: data.wasteCategory,
+          quantity: data.quantity,
+          pickupAddress: data.pickupAddress,
+          pickupLatitude: data.pickupLatitude,
+          pickupLongitude: data.pickupLongitude,
+          preferredDate: toDate(data.preferredDate)!,
+          preferredTimeSlot: data.preferredTimeSlot,
+          notes: data.notes,
+          status: data.status,
+          createdAt: toDate(data.createdAt)!,
+          updatedAt: toDate(data.updatedAt)!,
+          scheduledAt: toDate(data.scheduledAt),
+          completedAt: toDate(data.completedAt),
+          cancelledAt: toDate(data.cancelledAt),
+        } as PickupRequest);
+      });
+
+      const lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1] || null;
+      return { items, lastVisible };
+    } catch (error: any) {
+      console.error(`Error listing pickup requests for user ${userId}:`, error);
+      if (error.code === 'permission-denied') {
+        throw new Error('Permission denied: You do not have access to these pickup requests');
+      }
+      throw new Error(`Failed to list pickup requests: ${error.message || error}`);
+    }
   },
 
   updateStatus: async (

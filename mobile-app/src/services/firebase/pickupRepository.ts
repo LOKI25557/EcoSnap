@@ -89,8 +89,64 @@ export const pickupRepository = {
   },
 
   get: async (userId: string, requestId: string): Promise<PickupRequest | null> => {
-    // Stub for Commit 5
-    return null;
+    if (!userId) throw new Error('User ID is required');
+    if (!requestId) throw new Error('Request ID is required');
+
+    // Local ownership check
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthenticated: User must be logged in');
+    }
+    if (currentUser.uid !== userId) {
+      throw new Error('Permission denied: Cannot access another user\'s pickup requests');
+    }
+
+    try {
+      const docRef = doc(
+        db,
+        FIRESTORE_COLLECTIONS.USERS,
+        userId,
+        FIRESTORE_COLLECTIONS.PICKUP_REQUESTS,
+        requestId
+      );
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) {
+        return null;
+      }
+
+      const data = docSnap.data();
+      
+      const toDate = (ts: any): Date | undefined => {
+        if (!ts) return undefined;
+        return ts.toDate ? ts.toDate() : new Date(ts);
+      };
+
+      return {
+        id: docSnap.id,
+        userId: data.userId,
+        wasteRecordId: data.wasteRecordId,
+        wasteCategory: data.wasteCategory,
+        quantity: data.quantity,
+        pickupAddress: data.pickupAddress,
+        pickupLatitude: data.pickupLatitude,
+        pickupLongitude: data.pickupLongitude,
+        preferredDate: toDate(data.preferredDate)!,
+        preferredTimeSlot: data.preferredTimeSlot,
+        notes: data.notes,
+        status: data.status,
+        createdAt: toDate(data.createdAt)!,
+        updatedAt: toDate(data.updatedAt)!,
+        scheduledAt: toDate(data.scheduledAt),
+        completedAt: toDate(data.completedAt),
+        cancelledAt: toDate(data.cancelledAt),
+      } as PickupRequest;
+    } catch (error: any) {
+      console.error(`Error retrieving pickup request ${requestId} for user ${userId}:`, error);
+      if (error.code === 'permission-denied') {
+        throw new Error('Permission denied: You do not have access to this pickup request');
+      }
+      throw new Error(`Failed to retrieve pickup request: ${error.message || error}`);
+    }
   },
 
   list: async (params: {

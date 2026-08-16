@@ -316,6 +316,7 @@ export const pickupRepository = {
   },
 
   cancel: async (userId: string, requestId: string): Promise<void> => {
-    // Stub for Commit 8
+    // Delegates to updateStatus which validates ownership and status transitions
+    await pickupRepository.updateStatus(userId, requestId, 'cancelled', false);
   }
 };

@@ -11,13 +11,13 @@ export const validatePickupRequest = (
   isUpdate = false
 ) => {
   if (!isUpdate) {
-    if (!input.userId) throw new Error('Missing required field: userId');
-    if (!input.wasteRecordId) throw new Error('Missing required field: wasteRecordId');
-    if (!input.wasteCategory) throw new Error('Missing required field: wasteCategory');
-    if (!input.quantity) throw new Error('Missing required field: quantity');
-    if (!input.pickupAddress) throw new Error('Missing required field: pickupAddress');
-    if (!input.preferredDate) throw new Error('Missing required field: preferredDate');
-    if (!input.preferredTimeSlot) throw new Error('Missing required field: preferredTimeSlot');
+    if (!input.userId) throw new Error('User ID is required');
+    if (!input.wasteRecordId) throw new Error('Waste record ID is required');
+    if (!input.wasteCategory) throw new Error('Waste category is required');
+    if (!input.quantity || input.quantity.trim() === '') throw new Error('Quantity is required');
+    if (!input.pickupAddress || input.pickupAddress.trim() === '') throw new Error('Pickup address is required');
+    if (!input.preferredDate) throw new Error('Preferred date is required and must be a valid Date');
+    if (!input.preferredTimeSlot) throw new Error('Valid time slot is required (morning, afternoon, or evening)');
   }
 
   if (input.userId !== undefined) {

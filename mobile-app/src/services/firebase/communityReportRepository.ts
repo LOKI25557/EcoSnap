@@ -238,7 +238,25 @@ export const communityReportRepository = {
 
       const constraints: QueryConstraint[] = [];
 
-      // Sort newest first by default
+      // 1. Filtering by status
+      if (params.status) {
+        constraints.push(where('status', '==', params.status));
+      }
+
+      // 2. Filtering by report type
+      if (params.type) {
+        constraints.push(where('type', '==', params.type));
+      }
+
+      // 3. Filtering by date range on createdAt
+      if (params.startDate) {
+        constraints.push(where('createdAt', '>=', params.startDate));
+      }
+      if (params.endDate) {
+        constraints.push(where('createdAt', '<=', params.endDate));
+      }
+
+      // 4. Sort newest first
       constraints.push(orderBy('createdAt', 'desc'));
 
       // Limit setup

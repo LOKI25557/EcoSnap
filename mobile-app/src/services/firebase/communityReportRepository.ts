@@ -300,5 +300,75 @@ export const communityReportRepository = {
     }
   },
 
-  delete: async (userId: string, reportId: string): Promise<void> => {}
+  uploadPhoto: async (userId: string, reportId: string, fileUri: string): Promise<{ downloadURL: string; path: string }> => {
+    if (!userId) throw new Error('User ID is required');
+    if (!reportId) throw new Error('Report ID is required');
+
+    // Local ownership check
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthenticated: User must be logged in');
+    }
+    if (currentUser.uid !== userId) {
+      throw new Error('Permission denied: Cannot upload photo for another user\'s report');
+    }
+
+    try {
+      const result = await storageService.uploadReportImage(userId, reportId, fileUri);
+      return {
+        downloadURL: result.downloadURL,
+        path: result.path
+      };
+    } catch (error: any) {
+      console.error(`Error uploading report photo for user ${userId} and report ${reportId}:`, error);
+      throw new Error(`Failed to upload report photo: ${error.message || error}`);
+    }
+  },
+
+  delete: async (userId: string, reportId: string): Promise<void> => {
+    if (!userId) throw new Error('User ID is required');
+    if (!reportId) throw new Error('Report ID is required');
+
+    // Local ownership check
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthenticated: User must be logged in');
+    }
+    if (currentUser.uid !== userId) {
+      throw new Error('Permission denied: Cannot delete another user\'s community reports');
+    }
+
+    try {
+      const docRef = doc(
+        db,
+        FIRESTORE_COLLECTIONS.USERS,
+        userId,
+        FIRESTORE_COLLECTIONS.COMMUNITY_REPORTS,
+        reportId
+      );
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) {
+        throw new Error('Community report not found');
+      }
+
+      const data = docSnap.data();
+      const photoPath = data.photoPath;
+
+      if (photoPath) {
+        try {
+          await storageService.deleteFile(photoPath);
+        } catch (storageError) {
+          console.warn(`Failed to delete associated storage image at ${photoPath}:`, storageError);
+        }
+      }
+
+      await deleteDoc(docRef);
+    } catch (error: any) {
+      console.error(`Error deleting community report ${reportId} for user ${userId}:`, error);
+      if (error.code === 'permission-denied') {
+        throw new Error('Permission denied: You do not have permission to delete this community report');
+      }
+      throw new Error(`Failed to delete community report: ${error.message || error}`);
+    }
+  }
 };

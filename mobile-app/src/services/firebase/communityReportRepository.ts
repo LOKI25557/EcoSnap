@@ -36,7 +36,71 @@ export const validateCommunityReport = (
   input: Partial<CreateCommunityReportInput | CommunityReport>,
   isUpdate = false
 ) => {
-  // Skeleton validator to be populated in commit 9
+  // If not an update, check required fields
+  if (!isUpdate) {
+    if (!input.userId) throw new Error('User ID is required');
+    if (!input.type) throw new Error('Report type is required');
+    if (!input.description || input.description.trim() === '') throw new Error('Description is required');
+  }
+
+  if (input.userId !== undefined) {
+    if (typeof input.userId !== 'string' || input.userId.trim() === '') {
+      throw new Error('Invalid userId: must be a non-empty string');
+    }
+  }
+
+  if (input.type !== undefined) {
+    if (!REPORT_TYPES.includes(input.type as any)) {
+      throw new Error(`Invalid report type: must be one of ${REPORT_TYPES.join(', ')}`);
+    }
+  }
+
+  if (input.description !== undefined) {
+    if (typeof input.description !== 'string' || input.description.trim() === '') {
+      throw new Error('Description must be a non-empty string');
+    }
+    if (input.description.length > MAX_REPORT_DESCRIPTION_LENGTH) {
+      throw new Error(`Description cannot exceed ${MAX_REPORT_DESCRIPTION_LENGTH} characters`);
+    }
+  }
+
+  if (input.address !== undefined && input.address !== null) {
+    if (typeof input.address !== 'string' || input.address.trim() === '') {
+      throw new Error('Address must be a non-empty string');
+    }
+    if (input.address.length > MAX_REPORT_ADDRESS_LENGTH) {
+      throw new Error(`Address cannot exceed ${MAX_REPORT_ADDRESS_LENGTH} characters`);
+    }
+  }
+
+  const hasLat = input.latitude !== undefined && input.latitude !== null;
+  const hasLng = input.longitude !== undefined && input.longitude !== null;
+
+  if (hasLat || hasLng) {
+    if (!hasLat || !hasLng) {
+      throw new Error('Both latitude and longitude must be provided together');
+    }
+
+    if (typeof input.latitude !== 'number' || isNaN(input.latitude) || input.latitude < -90 || input.latitude > 90) {
+      throw new Error('Latitude must be a number between -90 and 90');
+    }
+
+    if (typeof input.longitude !== 'number' || isNaN(input.longitude) || input.longitude < -180 || input.longitude > 180) {
+      throw new Error('Longitude must be a number between -180 and 180');
+    }
+  }
+
+  if (input.photoUrl !== undefined && input.photoUrl !== null) {
+    if (typeof input.photoUrl !== 'string') {
+      throw new Error('photoUrl must be a string');
+    }
+  }
+
+  if (input.photoPath !== undefined && input.photoPath !== null) {
+    if (typeof input.photoPath !== 'string') {
+      throw new Error('photoPath must be a string');
+    }
+  }
 };
 
 export const communityReportRepository = {

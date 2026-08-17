@@ -152,7 +152,79 @@ export const communityReportRepository = {
     limit?: number;
     cursor?: any;
   }): Promise<{ items: CommunityReport[]; lastVisible: any | null }> => {
-    return { items: [], lastVisible: null };
+    const { userId } = params;
+    if (!userId) throw new Error('User ID is required');
+
+    // Local ownership check
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthenticated: User must be logged in');
+    }
+    if (currentUser.uid !== userId) {
+      throw new Error('Permission denied: Cannot access another user\'s community reports');
+    }
+
+    try {
+      const userReportsCol = collection(
+        db,
+        FIRESTORE_COLLECTIONS.USERS,
+        userId,
+        FIRESTORE_COLLECTIONS.COMMUNITY_REPORTS
+      );
+
+      const constraints: QueryConstraint[] = [];
+
+      // Sort newest first by default
+      constraints.push(orderBy('createdAt', 'desc'));
+
+      // Limit setup
+      const limitVal = params.limit !== undefined && params.limit > 0
+        ? Math.min(params.limit, REPORT_QUERY_DEFAULTS.MAX_LIMIT)
+        : REPORT_QUERY_DEFAULTS.DEFAULT_LIMIT;
+      constraints.push(limit(limitVal));
+
+      if (params.cursor) {
+        constraints.push(startAfter(params.cursor));
+      }
+
+      const q = query(userReportsCol, ...constraints);
+      const querySnapshot = await getDocs(q);
+
+      const toDate = (ts: any): Date | undefined => {
+        if (!ts) return undefined;
+        return ts.toDate ? ts.toDate() : new Date(ts);
+      };
+
+      const items: CommunityReport[] = [];
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        items.push({
+          id: docSnap.id,
+          userId: data.userId,
+          type: data.type,
+          description: data.description,
+          address: data.address || undefined,
+          latitude: data.latitude !== null && data.latitude !== undefined ? data.latitude : undefined,
+          longitude: data.longitude !== null && data.longitude !== undefined ? data.longitude : undefined,
+          photoUrl: data.photoUrl || undefined,
+          photoPath: data.photoPath || undefined,
+          status: data.status,
+          createdAt: toDate(data.createdAt)!,
+          updatedAt: toDate(data.updatedAt)!,
+          resolvedAt: toDate(data.resolvedAt),
+          rejectedAt: toDate(data.rejectedAt),
+        } as CommunityReport);
+      });
+
+      const lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1] || null;
+      return { items, lastVisible };
+    } catch (error: any) {
+      console.error(`Error listing community reports for user ${userId}:`, error);
+      if (error.code === 'permission-denied') {
+        throw new Error('Permission denied: You do not have access to these community reports');
+      }
+      throw new Error(`Failed to list community reports: ${error.message || error}`);
+    }
   },
 
   updateStatus: async (

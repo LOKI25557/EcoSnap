@@ -232,7 +232,73 @@ export const communityReportRepository = {
     reportId: string,
     newStatus: CommunityReportStatus,
     adminOverride = false
-  ): Promise<void> => {},
+  ): Promise<void> => {
+    if (!userId) throw new Error('User ID is required');
+    if (!reportId) throw new Error('Report ID is required');
+
+    // Local authentication/ownership check (unless adminOverride is true)
+    if (!adminOverride) {
+      const currentUser = authService.getCurrentUser();
+      if (!currentUser) {
+        throw new Error('Unauthenticated: User must be logged in');
+      }
+      if (currentUser.uid !== userId) {
+        throw new Error('Permission denied: Cannot update status of another user\'s report');
+      }
+      // Ordinary clients are not allowed to change status at all.
+      throw new Error('Permission denied: Ordinary users cannot change report status');
+    }
+
+    try {
+      const docRef = doc(
+        db,
+        FIRESTORE_COLLECTIONS.USERS,
+        userId,
+        FIRESTORE_COLLECTIONS.COMMUNITY_REPORTS,
+        reportId
+      );
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) {
+        throw new Error('Community report not found');
+      }
+
+      const data = docSnap.data();
+      const currentStatus = data.status as CommunityReportStatus;
+
+      // 1. Check if transition is valid
+      const VALID_TRANSITIONS: Record<CommunityReportStatus, CommunityReportStatus[]> = {
+        pending: ['under_review'],
+        under_review: ['verified', 'rejected'],
+        verified: ['resolved'],
+        resolved: [],
+        rejected: [],
+      };
+
+      if (!VALID_TRANSITIONS[currentStatus].includes(newStatus)) {
+        throw new Error(`Invalid status transition from ${currentStatus} to ${newStatus}`);
+      }
+
+      // 2. Prepare updates
+      const updates: Record<string, any> = {
+        status: newStatus,
+        updatedAt: serverTimestamp(),
+      };
+
+      if (newStatus === 'resolved') {
+        updates.resolvedAt = serverTimestamp();
+      } else if (newStatus === 'rejected') {
+        updates.rejectedAt = serverTimestamp();
+      }
+
+      await setDoc(docRef, updates, { merge: true });
+    } catch (error: any) {
+      console.error(`Error updating status for community report ${reportId}:`, error);
+      if (error.code === 'permission-denied') {
+        throw new Error('Permission denied: You do not have permission to update this community report');
+      }
+      throw new Error(`Failed to update community report status: ${error.message || error}`);
+    }
+  },
 
   delete: async (userId: string, reportId: string): Promise<void> => {}
 };

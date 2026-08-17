@@ -86,7 +86,61 @@ export const communityReportRepository = {
   },
 
   get: async (userId: string, reportId: string): Promise<CommunityReport | null> => {
-    return null;
+    if (!userId) throw new Error('User ID is required');
+    if (!reportId) throw new Error('Report ID is required');
+
+    // Local ownership check
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthenticated: User must be logged in');
+    }
+    if (currentUser.uid !== userId) {
+      throw new Error('Permission denied: Cannot access another user\'s community reports');
+    }
+
+    try {
+      const docRef = doc(
+        db,
+        FIRESTORE_COLLECTIONS.USERS,
+        userId,
+        FIRESTORE_COLLECTIONS.COMMUNITY_REPORTS,
+        reportId
+      );
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) {
+        return null;
+      }
+
+      const data = docSnap.data();
+
+      const toDate = (ts: any): Date | undefined => {
+        if (!ts) return undefined;
+        return ts.toDate ? ts.toDate() : new Date(ts);
+      };
+
+      return {
+        id: docSnap.id,
+        userId: data.userId,
+        type: data.type,
+        description: data.description,
+        address: data.address || undefined,
+        latitude: data.latitude !== null && data.latitude !== undefined ? data.latitude : undefined,
+        longitude: data.longitude !== null && data.longitude !== undefined ? data.longitude : undefined,
+        photoUrl: data.photoUrl || undefined,
+        photoPath: data.photoPath || undefined,
+        status: data.status,
+        createdAt: toDate(data.createdAt)!,
+        updatedAt: toDate(data.updatedAt)!,
+        resolvedAt: toDate(data.resolvedAt),
+        rejectedAt: toDate(data.rejectedAt),
+      } as CommunityReport;
+    } catch (error: any) {
+      console.error(`Error retrieving community report ${reportId} for user ${userId}:`, error);
+      if (error.code === 'permission-denied') {
+        throw new Error('Permission denied: You do not have access to this community report');
+      }
+      throw new Error(`Failed to retrieve community report: ${error.message || error}`);
+    }
   },
 
   list: async (params: {

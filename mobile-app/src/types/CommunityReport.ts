@@ -1,17 +1,52 @@
-export type CommunityReportType = 'illegal_dumping' | 'overflowing_bin' | 'waste_accumulation' | 'recycling_issue' | 'other';
-export type CommunityReportStatus = 'pending' | 'resolved' | 'investigating' | 'dismissed';
+export type CommunityReportType =
+  | 'illegal_dumping'
+  | 'overflowing_bin'
+  | 'damaged_bin'
+  | 'recycling_facility_issue'
+  | 'other';
+
+export type CommunityReportStatus =
+  | 'pending'
+  | 'under_review'
+  | 'verified'
+  | 'resolved'
+  | 'rejected';
 
 export interface CommunityReport {
   id: string;
   userId: string;
   type: CommunityReportType;
   description: string;
-  latitude: number;
-  longitude: number;
   address?: string;
+  latitude?: number;
+  longitude?: number;
+  photoUrl?: string;
+  photoPath?: string; // Firebase storage path
   status: CommunityReportStatus;
-  imageUrl?: string;
-  imagePath?: string; // Firebase storage path
   createdAt: Date;
   updatedAt: Date;
+  resolvedAt?: Date;
+  rejectedAt?: Date;
+}
+
+export interface CreateCommunityReportInput {
+  userId: string;
+  type: CommunityReportType;
+  description: string;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
+  photoUrl?: string;
+  photoPath?: string;
+}
+
+export interface UpdateCommunityReportInput {
+  type?: CommunityReportType;
+  description?: string;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
+  photoUrl?: string;
+  photoPath?: string;
+  status?: CommunityReportStatus;
 }

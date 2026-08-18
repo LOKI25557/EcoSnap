@@ -213,7 +213,78 @@ export const reviewRepository = {
     reviewId: string,
     input: UpdateReviewInput
   ): Promise<void> => {
-    throw new Error('Not implemented');
+    // 1. Authenticated user validation
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthenticated: User must be logged in');
+    }
+
+    const userId = currentUser.uid;
+
+    if (!facilityId || typeof facilityId !== 'string' || facilityId.trim() === '') {
+      throw new Error('Invalid facility ID: must be a non-empty string');
+    }
+    if (!reviewId || typeof reviewId !== 'string' || reviewId.trim() === '') {
+      throw new Error('Invalid review ID: must be a non-empty string');
+    }
+
+    // 2. Validate edit constraints
+    if (input.rating !== undefined) {
+      if (
+        typeof input.rating !== 'number' ||
+        input.rating < 1 ||
+        input.rating > 5 ||
+        !Number.isInteger(input.rating)
+      ) {
+        throw new Error('Invalid rating: must be an integer between 1 and 5');
+      }
+    }
+
+    if (input.comment !== undefined && input.comment !== null) {
+      if (typeof input.comment !== 'string') {
+        throw new Error('Comment must be a string');
+      }
+      if (input.comment.trim() === '') {
+        throw new Error('Comment cannot be empty or only whitespace');
+      }
+      if (input.comment.length > 500) {
+        throw new Error('Comment cannot exceed 500 characters');
+      }
+    }
+
+    try {
+      const docRef = doc(db, 'facilities', facilityId, 'reviews', reviewId);
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) {
+        throw new Error('Review not found');
+      }
+
+      const existingReview = docSnap.data();
+
+      // Enforce ownership
+      if (existingReview.userId !== userId) {
+        throw new Error('Permission denied: Cannot edit another user\'s review');
+      }
+
+      const updates: any = {
+        updatedAt: serverTimestamp(),
+      };
+
+      if (input.rating !== undefined) {
+        updates.rating = input.rating;
+      }
+      if (input.comment !== undefined) {
+        updates.comment = input.comment ? input.comment.trim() : '';
+      }
+
+      await setDoc(docRef, updates, { merge: true });
+    } catch (error: any) {
+      console.error(`Error updating review ${reviewId} for facility ${facilityId}:`, error);
+      if (error.code === 'permission-denied' || error.message.includes('Permission denied')) {
+        throw new Error('Permission denied: You do not have permission to update this review');
+      }
+      throw new Error(`Failed to update review: ${error.message || error}`);
+    }
   },
 
   delete: async (facilityId: string, reviewId: string): Promise<void> => {

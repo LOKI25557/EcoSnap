@@ -134,8 +134,40 @@ export const reviewRepository = {
       const reviewsCol = collection(db, 'facilities', facilityId, 'reviews');
       const constraints: any[] = [];
 
-      // We will add more filtering constraints in Commit 10
+      // 1. Filtering by rating (equality)
+      if (filters?.rating !== undefined) {
+        if (
+          typeof filters.rating !== 'number' ||
+          filters.rating < 1 ||
+          filters.rating > 5 ||
+          !Number.isInteger(filters.rating)
+        ) {
+          throw new Error('Invalid rating filter: must be an integer between 1 and 5');
+        }
+        constraints.push(where('rating', '==', filters.rating));
+      }
+
+      // 2. Filtering by date range (inequality)
+      if (filters?.startDate instanceof Date) {
+        constraints.push(where('createdAt', '>=', filters.startDate));
+      }
+      if (filters?.endDate instanceof Date) {
+        constraints.push(where('createdAt', '<=', filters.endDate));
+      }
+
+      // 3. Ordering (stable ordering by createdAt desc)
       constraints.push(orderBy('createdAt', 'desc'));
+
+      // 4. Pagination - Limit
+      const limitVal = filters?.limit && filters.limit > 0 && filters.limit <= 50 
+        ? filters.limit 
+        : 10;
+      constraints.push(limit(limitVal));
+
+      // 5. Pagination - Cursor (document snapshot)
+      if (filters?.cursor) {
+        constraints.push(startAfter(filters.cursor));
+      }
 
       const q = query(reviewsCol, ...constraints);
       const querySnapshot = await getDocs(q);

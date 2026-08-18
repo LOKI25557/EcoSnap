@@ -73,7 +73,10 @@ export const reviewRepository = {
       return userId;
     } catch (error: any) {
       console.error('Error creating review:', error);
-      throw new Error(`Failed to create review: ${error.message || error}`);
+      if (error.code) {
+        throw new Error(`Failed to create review: ${error.message || error}`);
+      }
+      throw error;
     }
   },
 
@@ -268,10 +271,13 @@ export const reviewRepository = {
       await setDoc(docRef, updates, { merge: true });
     } catch (error: any) {
       console.error(`Error updating review ${reviewId} for facility ${facilityId}:`, error);
-      if (error.code === 'permission-denied' || error.message.includes('Permission denied')) {
+      if (error.code === 'permission-denied') {
         throw new Error('Permission denied: You do not have permission to update this review');
       }
-      throw new Error(`Failed to update review: ${error.message || error}`);
+      if (error.code) {
+        throw new Error(`Failed to update review: ${error.message || error}`);
+      }
+      throw error;
     }
   },
 
@@ -308,10 +314,13 @@ export const reviewRepository = {
       await deleteDoc(docRef);
     } catch (error: any) {
       console.error(`Error deleting review ${reviewId} for facility ${facilityId}:`, error);
-      if (error.code === 'permission-denied' || error.message.includes('Permission denied')) {
+      if (error.code === 'permission-denied') {
         throw new Error('Permission denied: You do not have permission to delete this review');
       }
-      throw new Error(`Failed to delete review: ${error.message || error}`);
+      if (error.code) {
+        throw new Error(`Failed to delete review: ${error.message || error}`);
+      }
+      throw error;
     }
   }
 };

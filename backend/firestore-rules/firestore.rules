@@ -44,13 +44,23 @@ service cloud.firestore {
     match /facilities/{facilityId} {
       allow read: if isAuthenticated();
       allow write: if false; // Only manageable via admin dashboard or cloud functions
-    }
 
-    // reviews collection
-    match /reviews/{reviewId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      // reviews collection
+      match /reviews/{reviewId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() 
+                      && request.resource.data.userId == request.auth.uid
+                      && request.resource.data.facilityId == facilityId
+                      && request.resource.data.rating >= 1 
+                      && request.resource.data.rating <= 5;
+        allow update: if isAuthenticated() 
+                      && resource.data.userId == request.auth.uid
+                      && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['userId', 'facilityId', 'createdAt']))
+                      && request.resource.data.rating >= 1
+                      && request.resource.data.rating <= 5;
+        allow delete: if isAuthenticated() 
+                      && resource.data.userId == request.auth.uid;
+      }
     }
 
     // notifications collection

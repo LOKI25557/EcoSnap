@@ -101,7 +101,98 @@ export const reviewRepository = {
   },
 
   get: async (facilityId: string, reviewId: string): Promise<Review | null> => {
-    throw new Error('Not implemented');
+    if (!facilityId || typeof facilityId !== 'string' || facilityId.trim() === '') {
+      throw new Error('Invalid facility ID: must be a non-empty string');
+    }
+    if (!reviewId || typeof reviewId !== 'string' || reviewId.trim() === '') {
+      throw new Error('Invalid review ID: must be a non-empty string');
+    }
+
+    try {
+      const docRef = doc(db, 'facilities', facilityId, 'reviews', reviewId);
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) return null;
+
+      const data = docSnap.data();
+      const toDate = (ts: any): Date => {
+        if (!ts) return new Date();
+        return ts.toDate ? ts.toDate() : new Date(ts);
+      };
+
+      return {
+        id: docSnap.id,
+        facilityId: data.facilityId,
+        userId: data.userId,
+        rating: data.rating,
+        comment: data.comment,
+        createdAt: toDate(data.createdAt),
+        updatedAt: toDate(data.updatedAt),
+        userDisplayName: data.userDisplayName,
+        userPhotoUrl: data.userPhotoUrl,
+      } as Review;
+    } catch (error: any) {
+      console.error(`Error getting review ${reviewId} for facility ${facilityId}:`, error);
+      if (error.code === 'permission-denied') {
+        throw new Error('Permission denied: You do not have permission to access this review');
+      }
+      throw new Error(`Failed to retrieve review: ${error.message || error}`);
+    }
+  },
+
+  getFacilityReviews: async (
+    facilityId: string,
+    filters?: {
+      limit?: number;
+      cursor?: any;
+      rating?: number;
+      startDate?: Date;
+      endDate?: Date;
+    }
+  ): Promise<{ items: Review[]; lastVisible: any | null }> => {
+    if (!facilityId || typeof facilityId !== 'string' || facilityId.trim() === '') {
+      throw new Error('Invalid facility ID: must be a non-empty string');
+    }
+
+    try {
+      const reviewsCol = collection(db, 'facilities', facilityId, 'reviews');
+      const constraints: any[] = [];
+
+      // We will add more filtering constraints in Commit 10
+      constraints.push(orderBy('createdAt', 'desc'));
+
+      const q = query(reviewsCol, ...constraints);
+      const querySnapshot = await getDocs(q);
+
+      const items: Review[] = [];
+      const toDate = (ts: any): Date => {
+        if (!ts) return new Date();
+        return ts.toDate ? ts.toDate() : new Date(ts);
+      };
+
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        items.push({
+          id: docSnap.id,
+          facilityId: data.facilityId,
+          userId: data.userId,
+          rating: data.rating,
+          comment: data.comment,
+          createdAt: toDate(data.createdAt),
+          updatedAt: toDate(data.updatedAt),
+          userDisplayName: data.userDisplayName,
+          userPhotoUrl: data.userPhotoUrl,
+        } as Review);
+      });
+
+      const lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1] || null;
+      return { items, lastVisible };
+    } catch (error: any) {
+      console.error(`Error listing reviews for facility ${facilityId}:`, error);
+      if (error.code === 'permission-denied') {
+        throw new Error('Permission denied: You do not have permission to access these reviews');
+      }
+      throw new Error(`Failed to retrieve reviews: ${error.message || error}`);
+    }
   },
 
   list: async (
@@ -114,7 +205,7 @@ export const reviewRepository = {
       endDate?: Date;
     }
   ): Promise<{ items: Review[]; lastVisible: any | null }> => {
-    throw new Error('Not implemented');
+    return reviewRepository.getFacilityReviews(facilityId, filters);
   },
 
   update: async (

@@ -20,6 +20,7 @@ import {
   CreateReviewInput,
   UpdateReviewInput
 } from '../../types/Review';
+import { validateReview } from '../../utils/reviewValidator';
 
 export const reviewRepository = {
   create: async (input: CreateReviewInput): Promise<string> => {
@@ -32,31 +33,7 @@ export const reviewRepository = {
     const userId = currentUser.uid;
 
     // 2. Validate input
-    if (!input.facilityId || typeof input.facilityId !== 'string' || input.facilityId.trim() === '') {
-      throw new Error('Invalid facility ID: must be a non-empty string');
-    }
-
-    if (
-      input.rating === undefined ||
-      typeof input.rating !== 'number' ||
-      input.rating < 1 ||
-      input.rating > 5 ||
-      !Number.isInteger(input.rating)
-    ) {
-      throw new Error('Invalid rating: must be an integer between 1 and 5');
-    }
-
-    if (input.comment !== undefined && input.comment !== null) {
-      if (typeof input.comment !== 'string') {
-        throw new Error('Comment must be a string');
-      }
-      if (input.comment.trim() === '') {
-        throw new Error('Comment cannot be empty or only whitespace');
-      }
-      if (input.comment.length > 500) {
-        throw new Error('Comment cannot exceed 500 characters');
-      }
-    }
+    validateReview(input, false);
 
     try {
       // Get user details
@@ -229,28 +206,7 @@ export const reviewRepository = {
     }
 
     // 2. Validate edit constraints
-    if (input.rating !== undefined) {
-      if (
-        typeof input.rating !== 'number' ||
-        input.rating < 1 ||
-        input.rating > 5 ||
-        !Number.isInteger(input.rating)
-      ) {
-        throw new Error('Invalid rating: must be an integer between 1 and 5');
-      }
-    }
-
-    if (input.comment !== undefined && input.comment !== null) {
-      if (typeof input.comment !== 'string') {
-        throw new Error('Comment must be a string');
-      }
-      if (input.comment.trim() === '') {
-        throw new Error('Comment cannot be empty or only whitespace');
-      }
-      if (input.comment.length > 500) {
-        throw new Error('Comment cannot exceed 500 characters');
-      }
-    }
+    validateReview(input, true);
 
     try {
       const docRef = doc(db, 'facilities', facilityId, 'reviews', reviewId);

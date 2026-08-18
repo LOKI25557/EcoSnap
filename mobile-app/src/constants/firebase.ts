@@ -3,7 +3,18 @@ export const FIRESTORE_COLLECTIONS = {
   WASTE_RECORDS: 'wasteRecords',
   PICKUP_REQUESTS: 'pickupRequests',
   COMMUNITY_REPORTS: 'communityReports',
+  FACILITIES: 'facilities',
+  REVIEWS: 'reviews',
 } as const;
+
+export const REVIEW_COLLECTION = 'reviews';
+export const FACILITY_COLLECTION = 'facilities';
+
+export const MIN_RATING = 1;
+export const MAX_RATING = 5;
+export const MAX_REVIEW_LENGTH = 500;
+export const DEFAULT_REVIEW_PAGE_SIZE = 10;
+export const MAX_REVIEW_PAGE_SIZE = 50;
 
 export const WASTE_QUERY_DEFAULTS = {
   DEFAULT_LIMIT: 10,

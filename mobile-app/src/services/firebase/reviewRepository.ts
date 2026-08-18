@@ -288,6 +288,42 @@ export const reviewRepository = {
   },
 
   delete: async (facilityId: string, reviewId: string): Promise<void> => {
-    throw new Error('Not implemented');
+    // 1. Authenticated user validation
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthenticated: User must be logged in');
+    }
+
+    const userId = currentUser.uid;
+
+    if (!facilityId || typeof facilityId !== 'string' || facilityId.trim() === '') {
+      throw new Error('Invalid facility ID: must be a non-empty string');
+    }
+    if (!reviewId || typeof reviewId !== 'string' || reviewId.trim() === '') {
+      throw new Error('Invalid review ID: must be a non-empty string');
+    }
+
+    try {
+      const docRef = doc(db, 'facilities', facilityId, 'reviews', reviewId);
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) {
+        throw new Error('Review not found');
+      }
+
+      const existingReview = docSnap.data();
+
+      // Enforce ownership
+      if (existingReview.userId !== userId) {
+        throw new Error('Permission denied: Cannot delete another user\'s review');
+      }
+
+      await deleteDoc(docRef);
+    } catch (error: any) {
+      console.error(`Error deleting review ${reviewId} for facility ${facilityId}:`, error);
+      if (error.code === 'permission-denied' || error.message.includes('Permission denied')) {
+        throw new Error('Permission denied: You do not have permission to delete this review');
+      }
+      throw new Error(`Failed to delete review: ${error.message || error}`);
+    }
   }
 };

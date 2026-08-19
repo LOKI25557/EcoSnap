@@ -7,6 +7,18 @@ export const FIRESTORE_COLLECTIONS = {
   REVIEWS: 'reviews',
 } as const;
 
+export const NOTIFICATIONS_COLLECTION = 'notifications';
+export const NOTIFICATION_PREFERENCES_COLLECTION = 'notificationPreferences';
+export const NOTIFICATION_PREFERENCES_DOC = 'settings';
+export const DEVICES_COLLECTION = 'devices';
+
+export const NOTIFICATION_QUERY_DEFAULTS = {
+  DEFAULT_LIMIT: 10,
+  MAX_LIMIT: 50,
+} as const;
+
+export const NOTIFICATION_EXPIRATION_DAYS = 30;
+
 export const REVIEW_COLLECTION = 'reviews';
 export const FACILITY_COLLECTION = 'facilities';
 

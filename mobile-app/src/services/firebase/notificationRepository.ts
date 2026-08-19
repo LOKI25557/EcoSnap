@@ -1,0 +1,325 @@
+import {
+  collection,
+  doc,
+  setDoc,
+  getDoc,
+  getDocs,
+  query,
+  where,
+  orderBy,
+  limit,
+  startAfter,
+  deleteDoc,
+  serverTimestamp,
+  writeBatch
+} from 'firebase/firestore';
+import { db } from './firebaseConfig';
+import { authService } from './authService';
+import {
+  NOTIFICATIONS_COLLECTION,
+  NOTIFICATION_QUERY_DEFAULTS
+} from '../../constants/firebase';
+import {
+  Notification,
+  CreateNotificationInput,
+  NotificationType
+} from '../../types/Notification';
+
+const VALID_NOTIFICATION_TYPES: NotificationType[] = [
+  'pickup_created',
+  'pickup_scheduled',
+  'pickup_assigned',
+  'pickup_completed',
+  'pickup_cancelled',
+  'report_under_review',
+  'report_verified',
+  'report_rejected',
+  'report_resolved',
+  'review_update',
+  'general',
+  'pickup_update',
+  'community_update',
+  'recycling_reminder',
+  'system'
+];
+
+export const notificationRepository = {
+  create: async (input: CreateNotificationInput): Promise<string> => {
+    // 1. Authenticated user validation
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthenticated: User must be logged in');
+    }
+    if (currentUser.uid !== input.userId) {
+      throw new Error('Permission denied: Cannot create notification for another user');
+    }
+
+    // 2. Validate type
+    if (!VALID_NOTIFICATION_TYPES.includes(input.type)) {
+      throw new Error(`Invalid notification type: ${input.type}`);
+    }
+
+    // 3. Validate title and body
+    if (!input.title || input.title.trim() === '') {
+      throw new Error('Notification title is required');
+    }
+    if (!input.body || input.body.trim() === '') {
+      throw new Error('Notification body is required');
+    }
+
+    try {
+      const notificationsRef = collection(db, 'users', input.userId, NOTIFICATIONS_COLLECTION);
+      const docRef = doc(notificationsRef);
+      
+      const data: any = {
+        id: docRef.id,
+        userId: input.userId,
+        type: input.type,
+        title: input.title,
+        body: input.body,
+        message: input.body, // Fallback for legacy
+        read: false,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        data: input.data || null,
+        expiresAt: input.expiresAt || null,
+        imageUrl: input.imageUrl || null,
+        actionUrl: input.actionUrl || null
+      };
+
+      await setDoc(docRef, data);
+      return docRef.id;
+    } catch (error: any) {
+      console.error('Error creating notification:', error);
+      throw error;
+    }
+  },
+
+  get: async (userId: string, notificationId: string): Promise<Notification | null> => {
+    if (!userId || userId.trim() === '') {
+      throw new Error('Invalid user ID');
+    }
+    if (!notificationId || notificationId.trim() === '') {
+      throw new Error('Invalid notification ID');
+    }
+
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthenticated: User must be logged in');
+    }
+    if (currentUser.uid !== userId) {
+      throw new Error('Permission denied: Cannot access another user\'s notifications');
+    }
+
+    try {
+      const docRef = doc(db, 'users', userId, NOTIFICATIONS_COLLECTION, notificationId);
+      const docSnap = await getDoc(docRef);
+
+      if (!docSnap.exists()) {
+        return null;
+      }
+
+      const data = docSnap.data();
+      const toDate = (ts: any): Date => {
+        if (!ts) return new Date();
+        return ts.toDate ? ts.toDate() : new Date(ts);
+      };
+
+      return {
+        id: docSnap.id,
+        userId: data.userId,
+        type: data.type,
+        title: data.title,
+        body: data.body,
+        message: data.message,
+        read: data.read ?? false,
+        isRead: data.read ?? false,
+        createdAt: toDate(data.createdAt),
+        updatedAt: toDate(data.updatedAt),
+        expiresAt: data.expiresAt ? toDate(data.expiresAt) : undefined,
+        data: data.data || undefined,
+        imageUrl: data.imageUrl || undefined,
+        actionUrl: data.actionUrl || undefined
+      } as Notification;
+    } catch (error: any) {
+      console.error(`Error getting notification ${notificationId}:`, error);
+      throw error;
+    }
+  },
+
+  list: async (params: {
+    userId: string;
+    unreadOnly?: boolean;
+    limit?: number;
+    cursor?: any;
+  }): Promise<{ items: Notification[]; lastVisible: any | null }> => {
+    const { userId, unreadOnly = false, limit: limitVal, cursor } = params;
+
+    if (!userId || userId.trim() === '') {
+      throw new Error('Invalid user ID');
+    }
+
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthenticated: User must be logged in');
+    }
+    if (currentUser.uid !== userId) {
+      throw new Error('Permission denied: Cannot list another user\'s notifications');
+    }
+
+    try {
+      const notificationsRef = collection(db, 'users', userId, NOTIFICATIONS_COLLECTION);
+      const constraints: any[] = [];
+
+      if (unreadOnly) {
+        constraints.push(where('read', '==', false));
+      }
+
+      constraints.push(orderBy('createdAt', 'desc'));
+
+      const defaultLimit = NOTIFICATION_QUERY_DEFAULTS.DEFAULT_LIMIT;
+      const maxLimit = NOTIFICATION_QUERY_DEFAULTS.MAX_LIMIT;
+      const appliedLimit = limitVal ? Math.min(limitVal, maxLimit) : defaultLimit;
+      constraints.push(limit(appliedLimit));
+
+      if (cursor) {
+        constraints.push(startAfter(cursor));
+      }
+
+      const q = query(notificationsRef, ...constraints);
+      const querySnapshot = await getDocs(q);
+
+      const items: Notification[] = [];
+      const toDate = (ts: any): Date => {
+        if (!ts) return new Date();
+        return ts.toDate ? ts.toDate() : new Date(ts);
+      };
+
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        items.push({
+          id: docSnap.id,
+          userId: data.userId,
+          type: data.type,
+          title: data.title,
+          body: data.body,
+          message: data.message,
+          read: data.read ?? false,
+          isRead: data.read ?? false,
+          createdAt: toDate(data.createdAt),
+          updatedAt: toDate(data.updatedAt),
+          expiresAt: data.expiresAt ? toDate(data.expiresAt) : undefined,
+          data: data.data || undefined,
+          imageUrl: data.imageUrl || undefined,
+          actionUrl: data.actionUrl || undefined
+        } as Notification);
+      });
+
+      const lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1] || null;
+      return { items, lastVisible };
+    } catch (error: any) {
+      console.error(`Error listing notifications for user ${userId}:`, error);
+      throw error;
+    }
+  },
+
+  markAsRead: async (userId: string, notificationId: string): Promise<void> => {
+    if (!userId || userId.trim() === '') {
+      throw new Error('Invalid user ID');
+    }
+    if (!notificationId || notificationId.trim() === '') {
+      throw new Error('Invalid notification ID');
+    }
+
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthenticated: User must be logged in');
+    }
+    if (currentUser.uid !== userId) {
+      throw new Error('Permission denied: Cannot update another user\'s notifications');
+    }
+
+    try {
+      const docRef = doc(db, 'users', userId, NOTIFICATIONS_COLLECTION, notificationId);
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) {
+        throw new Error('Notification not found');
+      }
+
+      await setDoc(docRef, {
+        read: true,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    } catch (error: any) {
+      console.error(`Error marking notification ${notificationId} as read:`, error);
+      throw error;
+    }
+  },
+
+  markAllAsRead: async (userId: string): Promise<void> => {
+    if (!userId || userId.trim() === '') {
+      throw new Error('Invalid user ID');
+    }
+
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthenticated: User must be logged in');
+    }
+    if (currentUser.uid !== userId) {
+      throw new Error('Permission denied: Cannot update another user\'s notifications');
+    }
+
+    try {
+      const notificationsRef = collection(db, 'users', userId, NOTIFICATIONS_COLLECTION);
+      const q = query(notificationsRef, where('read', '==', false));
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        return;
+      }
+
+      const batch = writeBatch(db);
+      querySnapshot.forEach((docSnap) => {
+        batch.update(docSnap.ref, {
+          read: true,
+          updatedAt: serverTimestamp()
+        });
+      });
+
+      await batch.commit();
+    } catch (error: any) {
+      console.error(`Error marking all notifications as read for user ${userId}:`, error);
+      throw error;
+    }
+  },
+
+  delete: async (userId: string, notificationId: string): Promise<void> => {
+    if (!userId || userId.trim() === '') {
+      throw new Error('Invalid user ID');
+    }
+    if (!notificationId || notificationId.trim() === '') {
+      throw new Error('Invalid notification ID');
+    }
+
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthenticated: User must be logged in');
+    }
+    if (currentUser.uid !== userId) {
+      throw new Error('Permission denied: Cannot delete another user\'s notifications');
+    }
+
+    try {
+      const docRef = doc(db, 'users', userId, NOTIFICATIONS_COLLECTION, notificationId);
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) {
+        throw new Error('Notification not found');
+      }
+
+      await deleteDoc(docRef);
+    } catch (error: any) {
+      console.error(`Error deleting notification ${notificationId}:`, error);
+      throw error;
+    }
+  }
+};

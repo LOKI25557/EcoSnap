@@ -213,6 +213,14 @@ jest.mock('../authService', () => ({
   },
 }));
 
+// Mock notificationEventService
+jest.mock('../notificationEventService', () => ({
+  notificationEventService: {
+    triggerPickupEvent: jest.fn().mockResolvedValue('mock-notif-id'),
+    triggerReportEvent: jest.fn().mockResolvedValue('mock-notif-id'),
+  },
+}));
+
 describe('pickupRepository Tests', () => {
   const testUserId = 'user_123';
   const testWasteId = 'waste_456';

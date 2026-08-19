@@ -216,6 +216,14 @@ jest.mock('../storageService', () => ({
   },
 }));
 
+// Mock notificationEventService
+jest.mock('../notificationEventService', () => ({
+  notificationEventService: {
+    triggerPickupEvent: jest.fn().mockResolvedValue('mock-notif-id'),
+    triggerReportEvent: jest.fn().mockResolvedValue('mock-notif-id'),
+  },
+}));
+
 describe('Community Report Repository', () => {
   const testUserId = 'test_user_123';
   const otherUserId = 'other_user_456';

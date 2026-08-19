@@ -3,6 +3,7 @@ import { db } from './firebaseConfig';
 import { authService } from './authService';
 import { FIRESTORE_COLLECTIONS, PICKUP_QUERY_DEFAULTS } from '../../constants/firebase';
 import { PickupRequest, PickupStatus, PickupTimeSlot, PickupRequestInput, PickupRequestUpdate } from '../../types/PickupRequest';
+import { notificationEventService } from './notificationEventService';
 
 export const MAX_PICKUP_NOTES_LENGTH = 500;
 
@@ -130,6 +131,13 @@ export const pickupRepository = {
       };
 
       await setDoc(docRef, newRequest);
+      
+      try {
+        await notificationEventService.triggerPickupEvent(input.userId, 'pickup_created', docRef.id);
+      } catch (notifErr) {
+        console.warn('Failed to send pickup creation notification:', notifErr);
+      }
+
       return docRef.id;
     } catch (error: any) {
       console.error('Error creating pickup request in repository:', error);
@@ -377,6 +385,20 @@ export const pickupRepository = {
       }
 
       await setDoc(docRef, updates, { merge: true });
+
+      try {
+        let eventType: any = null;
+        if (newStatus === 'scheduled') eventType = 'pickup_scheduled';
+        else if (newStatus === 'assigned') eventType = 'pickup_assigned';
+        else if (newStatus === 'completed') eventType = 'pickup_completed';
+        else if (newStatus === 'cancelled') eventType = 'pickup_cancelled';
+
+        if (eventType) {
+          await notificationEventService.triggerPickupEvent(userId, eventType, requestId);
+        }
+      } catch (notifErr) {
+        console.warn('Failed to send pickup status update notification:', notifErr);
+      }
     } catch (error: any) {
       console.error(`Error updating status for pickup request ${requestId}:`, error);
       if (error.code === 'permission-denied') {

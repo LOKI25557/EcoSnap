@@ -17,12 +17,15 @@ import { db } from './firebaseConfig';
 import { authService } from './authService';
 import {
   NOTIFICATIONS_COLLECTION,
+  NOTIFICATION_PREFERENCES_COLLECTION,
+  NOTIFICATION_PREFERENCES_DOC,
   NOTIFICATION_QUERY_DEFAULTS
 } from '../../constants/firebase';
 import {
   Notification,
   CreateNotificationInput,
-  NotificationType
+  NotificationType,
+  NotificationPreferences
 } from '../../types/Notification';
 
 const VALID_NOTIFICATION_TYPES: NotificationType[] = [
@@ -330,6 +333,105 @@ export const notificationRepository = {
       return querySnapshot.size;
     } catch (error: any) {
       console.error(`Error getting unread count for user ${userId}:`, error);
+      throw error;
+    }
+  },
+
+  getNotificationPreferences: async (userId: string): Promise<NotificationPreferences> => {
+    if (!userId || userId.trim() === '') {
+      throw new Error('Invalid user ID');
+    }
+
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthenticated: User must be logged in');
+    }
+    if (currentUser.uid !== userId) {
+      throw new Error('Permission denied: Cannot access another user\'s preferences');
+    }
+
+    const defaultPrefs: NotificationPreferences = {
+      pickupUpdates: true,
+      communityReports: true,
+      reviews: false,
+      general: true,
+      marketing: false,
+      dailyReminders: true,
+      streakAlerts: true,
+      challenges: true,
+      quietHoursStart: '22:00',
+      quietHoursEnd: '08:00'
+    };
+
+    try {
+      const docRef = doc(db, 'users', userId, NOTIFICATION_PREFERENCES_COLLECTION, NOTIFICATION_PREFERENCES_DOC);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        return {
+          ...defaultPrefs,
+          ...data
+        } as NotificationPreferences;
+      }
+
+      const userRef = doc(db, 'users', userId);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        if (userData.notificationPreferences) {
+          const merged = {
+            ...defaultPrefs,
+            ...userData.notificationPreferences
+          };
+          await setDoc(docRef, merged);
+          return merged as NotificationPreferences;
+        }
+      }
+
+      return defaultPrefs;
+    } catch (error: any) {
+      console.error(`Error getting notification preferences for user ${userId}:`, error);
+      throw error;
+    }
+  },
+
+  updateNotificationPreferences: async (userId: string, preferences: Partial<NotificationPreferences>): Promise<void> => {
+    if (!userId || userId.trim() === '') {
+      throw new Error('Invalid user ID');
+    }
+
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthenticated: User must be logged in');
+    }
+    if (currentUser.uid !== userId) {
+      throw new Error('Permission denied: Cannot update another user\'s preferences');
+    }
+
+    try {
+      const current = await notificationRepository.getNotificationPreferences(userId);
+      const updated = {
+        ...current,
+        ...preferences
+      };
+
+      const docRef = doc(db, 'users', userId, NOTIFICATION_PREFERENCES_COLLECTION, NOTIFICATION_PREFERENCES_DOC);
+      await setDoc(docRef, updated, { merge: true });
+
+      try {
+        const userRef = doc(db, 'users', userId);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          await setDoc(userRef, {
+            notificationPreferences: updated
+          }, { merge: true });
+        }
+      } catch (profileError) {
+        console.warn('Soft fail updating notificationPreferences in profile document:', profileError);
+      }
+    } catch (error: any) {
+      console.error(`Error updating notification preferences for user ${userId}:`, error);
       throw error;
     }
   },

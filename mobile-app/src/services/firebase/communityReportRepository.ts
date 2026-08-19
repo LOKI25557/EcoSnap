@@ -16,6 +16,7 @@ import {
 import { db } from './firebaseConfig';
 import { authService } from './authService';
 import { storageService } from './storageService';
+import { notificationEventService } from './notificationEventService';
 import {
   FIRESTORE_COLLECTIONS,
   REPORT_QUERY_DEFAULTS,
@@ -373,6 +374,20 @@ export const communityReportRepository = {
       }
 
       await setDoc(docRef, updates, { merge: true });
+
+      try {
+        let eventType: any = null;
+        if (newStatus === 'under_review') eventType = 'report_under_review';
+        else if (newStatus === 'verified') eventType = 'report_verified';
+        else if (newStatus === 'rejected') eventType = 'report_rejected';
+        else if (newStatus === 'resolved') eventType = 'report_resolved';
+
+        if (eventType) {
+          await notificationEventService.triggerReportEvent(userId, eventType, reportId);
+        }
+      } catch (notifErr) {
+        console.warn('Failed to send community report status update notification:', notifErr);
+      }
     } catch (error: any) {
       console.error(`Error updating status for community report ${reportId}:`, error);
       if (error.code === 'permission-denied') {

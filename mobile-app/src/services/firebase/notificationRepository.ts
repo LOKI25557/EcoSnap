@@ -19,13 +19,15 @@ import {
   NOTIFICATIONS_COLLECTION,
   NOTIFICATION_PREFERENCES_COLLECTION,
   NOTIFICATION_PREFERENCES_DOC,
+  DEVICES_COLLECTION,
   NOTIFICATION_QUERY_DEFAULTS
 } from '../../constants/firebase';
 import {
   Notification,
   CreateNotificationInput,
   NotificationType,
-  NotificationPreferences
+  NotificationPreferences,
+  DeviceToken
 } from '../../types/Notification';
 
 const VALID_NOTIFICATION_TYPES: NotificationType[] = [
@@ -432,6 +434,132 @@ export const notificationRepository = {
       }
     } catch (error: any) {
       console.error(`Error updating notification preferences for user ${userId}:`, error);
+      throw error;
+    }
+  },
+
+  registerDeviceToken: async (
+    userId: string,
+    device: { deviceId: string; pushToken: string; platform: 'ios' | 'android' | 'web' }
+  ): Promise<void> => {
+    if (!userId || userId.trim() === '') {
+      throw new Error('Invalid user ID');
+    }
+    if (!device.deviceId || device.deviceId.trim() === '') {
+      throw new Error('Invalid device ID');
+    }
+    if (!device.pushToken || device.pushToken.trim() === '') {
+      throw new Error('Invalid push token');
+    }
+    const validPlatforms = ['ios', 'android', 'web'];
+    if (!validPlatforms.includes(device.platform)) {
+      throw new Error(`Invalid platform: ${device.platform}`);
+    }
+
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthenticated: User must be logged in');
+    }
+    if (currentUser.uid !== userId) {
+      throw new Error('Permission denied: Cannot register device token under another user\'s account');
+    }
+
+    try {
+      const docRef = doc(db, 'users', userId, DEVICES_COLLECTION, device.deviceId);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        await setDoc(docRef, {
+          pushToken: device.pushToken,
+          platform: device.platform,
+          updatedAt: serverTimestamp(),
+          lastSeenAt: serverTimestamp()
+        }, { merge: true });
+      } else {
+        await setDoc(docRef, {
+          deviceId: device.deviceId,
+          userId,
+          pushToken: device.pushToken,
+          platform: device.platform,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          lastSeenAt: serverTimestamp()
+        });
+      }
+    } catch (error: any) {
+      console.error(`Error registering device token for user ${userId}:`, error);
+      throw error;
+    }
+  },
+
+  removeDeviceToken: async (userId: string, deviceId: string): Promise<void> => {
+    if (!userId || userId.trim() === '') {
+      throw new Error('Invalid user ID');
+    }
+    if (!deviceId || deviceId.trim() === '') {
+      throw new Error('Invalid device ID');
+    }
+
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthenticated: User must be logged in');
+    }
+    if (currentUser.uid !== userId) {
+      throw new Error('Permission denied: Cannot remove device token for another user');
+    }
+
+    try {
+      const docRef = doc(db, 'users', userId, DEVICES_COLLECTION, deviceId);
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) {
+        throw new Error('Device token not found');
+      }
+      await deleteDoc(docRef);
+    } catch (error: any) {
+      console.error(`Error removing device token ${deviceId} for user ${userId}:`, error);
+      throw error;
+    }
+  },
+
+  getDeviceTokens: async (userId: string): Promise<DeviceToken[]> => {
+    if (!userId || userId.trim() === '') {
+      throw new Error('Invalid user ID');
+    }
+
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthenticated: User must be logged in');
+    }
+    if (currentUser.uid !== userId) {
+      throw new Error('Permission denied: Cannot access another user\'s device tokens');
+    }
+
+    try {
+      const devicesRef = collection(db, 'users', userId, DEVICES_COLLECTION);
+      const querySnapshot = await getDocs(devicesRef);
+
+      const items: DeviceToken[] = [];
+      const toDate = (ts: any): Date => {
+        if (!ts) return new Date();
+        return ts.toDate ? ts.toDate() : new Date(ts);
+      };
+
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        items.push({
+          deviceId: docSnap.id,
+          userId: data.userId,
+          pushToken: data.pushToken,
+          platform: data.platform,
+          createdAt: toDate(data.createdAt),
+          updatedAt: toDate(data.updatedAt),
+          lastSeenAt: toDate(data.lastSeenAt)
+        } as DeviceToken);
+      });
+
+      return items;
+    } catch (error: any) {
+      console.error(`Error getting device tokens for user ${userId}:`, error);
       throw error;
     }
   },

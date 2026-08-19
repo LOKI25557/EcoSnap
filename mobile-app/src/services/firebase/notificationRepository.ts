@@ -223,6 +223,15 @@ export const notificationRepository = {
     }
   },
 
+  getUserNotifications: async (params: {
+    userId: string;
+    unreadOnly?: boolean;
+    limit?: number;
+    cursor?: any;
+  }): Promise<{ items: Notification[]; lastVisible: any | null }> => {
+    return await notificationRepository.list(params);
+  },
+
   markAsRead: async (userId: string, notificationId: string): Promise<void> => {
     if (!userId || userId.trim() === '') {
       throw new Error('Invalid user ID');

@@ -302,6 +302,38 @@ export const notificationRepository = {
     }
   },
 
+  markNotificationAsRead: async (userId: string, notificationId: string): Promise<void> => {
+    return await notificationRepository.markAsRead(userId, notificationId);
+  },
+
+  markAllNotificationsAsRead: async (userId: string): Promise<void> => {
+    return await notificationRepository.markAllAsRead(userId);
+  },
+
+  getUnreadNotificationCount: async (userId: string): Promise<number> => {
+    if (!userId || userId.trim() === '') {
+      throw new Error('Invalid user ID');
+    }
+
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthenticated: User must be logged in');
+    }
+    if (currentUser.uid !== userId) {
+      throw new Error('Permission denied: Cannot access another user\'s notifications');
+    }
+
+    try {
+      const notificationsRef = collection(db, 'users', userId, NOTIFICATIONS_COLLECTION);
+      const q = query(notificationsRef, where('read', '==', false));
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.size;
+    } catch (error: any) {
+      console.error(`Error getting unread count for user ${userId}:`, error);
+      throw error;
+    }
+  },
+
   delete: async (userId: string, notificationId: string): Promise<void> => {
     if (!userId || userId.trim() === '') {
       throw new Error('Invalid user ID');

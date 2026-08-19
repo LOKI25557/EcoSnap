@@ -23,6 +23,8 @@ import { CommunityReport } from '../../types/CommunityReport';
 import { Facility } from '../../types/Facility';
 import { Review } from '../../types/Review';
 import { Notification } from '../../types/Notification';
+import { notificationRepository } from './notificationRepository';
+import { authService } from './authService';
 
 export const COLLECTIONS = {
   USERS: 'users',
@@ -581,18 +583,18 @@ export const firestoreService = {
     }
   },
 
-  // Notification Repository
+  // Notification Repository delegates
   createNotification: async (notification: Omit<Notification, 'id' | 'createdAt'>): Promise<string> => {
-    try {
-      const newNotification = {
-        ...notification,
-        createdAt: serverTimestamp(),
-      };
-      return await firestoreService.addDocument(COLLECTIONS.NOTIFICATIONS, newNotification);
-    } catch (error) {
-      console.error('Error creating notification:', error);
-      throw error;
-    }
+    return await notificationRepository.create({
+      userId: notification.userId,
+      type: notification.type,
+      title: notification.title,
+      body: notification.body || notification.message || '',
+      data: notification.data,
+      expiresAt: notification.expiresAt,
+      imageUrl: notification.imageUrl,
+      actionUrl: notification.actionUrl,
+    });
   },
 
   getUserNotifications: async (
@@ -600,47 +602,26 @@ export const firestoreService = {
     limitVal?: number,
     startAfterDoc?: any
   ): Promise<{ items: Notification[]; lastVisible: any | null }> => {
-    try {
-      const constraints: QueryConstraint[] = [
-        where('userId', '==', userId),
-        orderBy('createdAt', 'desc')
-      ];
-
-      if (limitVal) {
-        constraints.push(limit(limitVal));
-      }
-      if (startAfterDoc) {
-        constraints.push(startAfter(startAfterDoc));
-      }
-
-      const result = await firestoreService.queryDocuments<any>(COLLECTIONS.NOTIFICATIONS, constraints);
-      const items = result.items.map((data) => ({
-        ...data,
-        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
-      })) as Notification[];
-
-      return { items, lastVisible: result.lastVisible };
-    } catch (error) {
-      console.error(`Error getting notifications for user ${userId}:`, error);
-      throw error;
-    }
+    return await notificationRepository.list({
+      userId,
+      limit: limitVal,
+      cursor: startAfterDoc,
+    });
   },
 
   markNotificationAsRead: async (id: string): Promise<void> => {
-    try {
-      await firestoreService.updateDocument(COLLECTIONS.NOTIFICATIONS, id, { isRead: true });
-    } catch (error) {
-      console.error(`Error marking notification ${id} as read:`, error);
-      throw error;
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthenticated: User must be logged in');
     }
+    await notificationRepository.markAsRead(currentUser.uid, id);
   },
 
   deleteNotification: async (id: string): Promise<void> => {
-    try {
-      await firestoreService.deleteDocument(COLLECTIONS.NOTIFICATIONS, id);
-    } catch (error) {
-      console.error(`Error deleting notification ${id}:`, error);
-      throw error;
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthenticated: User must be logged in');
     }
+    await notificationRepository.delete(currentUser.uid, id);
   }
 };

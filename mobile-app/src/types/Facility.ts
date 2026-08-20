@@ -1,16 +1,20 @@
-export type FacilityType = 'recycling_center' | 'e_waste_center' | 'donation_center' | 'collection_point';
+export type FacilityType = 'recycling_center' | 'ewaste_facility' | 'donation_center' | 'e_waste_center' | 'collection_point';
 
 export interface Facility {
   id: string;
   name: string;
   type: FacilityType;
-  address: string;
   latitude: number;
   longitude: number;
+  address: string;
   phone?: string;
   website?: string;
-  acceptedMaterials: string[];
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  openingHours?: string;
+  acceptedMaterials?: string[];
+  verified?: boolean;
+  distanceMeters?: number;
+  isActive?: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
+

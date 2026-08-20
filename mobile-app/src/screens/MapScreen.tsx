@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, StyleSheet, ActivityIndicator, Alert, Text, useColorScheme, Platform, Linking } from 'react-native';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { View, StyleSheet, ActivityIndicator, Alert, Text, useColorScheme, Platform, Linking, TextInput, ScrollView, TouchableOpacity } from 'react-native';
 import MapView from 'react-native-maps';
 import { LocationService } from '../services/location/LocationService';
 import { facilityService } from '../services/recycling/facilityService';
@@ -14,6 +14,8 @@ import { CommunityReport } from '../types/CommunityReport';
 import { CommunityReportMarker } from '../components/maps/CommunityReportMarker';
 import { CommunityReportDetailsCard } from '../components/maps/CommunityReportDetailsCard';
 
+type FilterType = 'all' | 'recycling' | 'ewaste' | 'donation' | 'reports';
+
 const MapScreen = () => {
   const isDarkMode = useColorScheme() === 'dark';
   const [userLocation, setUserLocation] = useState<Coordinate | null>(null);
@@ -21,6 +23,8 @@ const MapScreen = () => {
   const [reports, setReports] = useState<CommunityReport[]>([]);
   const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null);
   const [selectedReport, setSelectedReport] = useState<CommunityReport | null>(null);
+  const [filter, setFilter] = useState<FilterType>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
   const fetchFacilities = useCallback(async (location: Coordinate) => {
@@ -73,6 +77,54 @@ const MapScreen = () => {
       LocationService.stopWatchingLocation();
     };
   }, [loadData]);
+
+  // Memoized filtered facilities
+  const filteredFacilities = useMemo(() => {
+    let result = facilities;
+
+    if (filter === 'recycling') {
+      result = result.filter((f) => f.type === 'recycling_center');
+    } else if (filter === 'ewaste') {
+      result = result.filter((f) => f.type === 'ewaste_facility' || f.type === 'e_waste_center');
+    } else if (filter === 'donation') {
+      result = result.filter((f) => f.type === 'donation_center');
+    } else if (filter === 'reports') {
+      return [];
+    }
+
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        (f) =>
+          f.name.toLowerCase().includes(query) ||
+          f.address.toLowerCase().includes(query) ||
+          (f.acceptedMaterials && f.acceptedMaterials.some((m) => m.toLowerCase().includes(query)))
+      );
+    }
+
+    return result;
+  }, [facilities, filter, searchQuery]);
+
+  // Memoized filtered reports
+  const filteredReports = useMemo(() => {
+    if (filter !== 'all' && filter !== 'reports') {
+      return [];
+    }
+
+    let result = reports;
+
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        (r) =>
+          r.description.toLowerCase().includes(query) ||
+          (r.address && r.address.toLowerCase().includes(query)) ||
+          r.type.toLowerCase().includes(query)
+      );
+    }
+
+    return result;
+  }, [reports, filter, searchQuery]);
 
   const handleFacilityPress = (facility: Facility) => {
     setSelectedReport(null);
@@ -142,7 +194,7 @@ const MapScreen = () => {
         showsMyLocationButton
         userInterfaceStyle={isDarkMode ? 'dark' : 'light'}
       >
-        {facilities.map((facility) => (
+        {filteredFacilities.map((facility) => (
           <FacilityMarker
             key={facility.id}
             facility={facility}
@@ -150,7 +202,7 @@ const MapScreen = () => {
           />
         ))}
 
-        {reports.map((report) => (
+        {filteredReports.map((report) => (
           <CommunityReportMarker
             key={report.id}
             report={report}
@@ -158,6 +210,93 @@ const MapScreen = () => {
           />
         ))}
       </MapView>
+
+      {/* Floating Filter and Search Bar */}
+      <View style={styles.headerContainer}>
+        <View style={styles.searchBarContainer}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by name, address, or materials..."
+            value={searchQuery}
+            onChangeText={(text) => {
+              setSearchQuery(text);
+              setSelectedFacility(null);
+              setSelectedReport(null);
+            }}
+            placeholderTextColor="#888"
+          />
+          {searchQuery ? (
+            <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
+              <Text style={styles.clearButtonText}>✕</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterScrollView}
+          contentContainerStyle={styles.filterContent}
+        >
+          <TouchableOpacity
+            style={[styles.filterChip, filter === 'all' && styles.activeFilterChip]}
+            onPress={() => {
+              setFilter('all');
+              setSelectedFacility(null);
+              setSelectedReport(null);
+            }}
+          >
+            <Text style={[styles.filterChipText, filter === 'all' && styles.activeFilterChipText]}>All</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.filterChip, filter === 'recycling' && styles.activeFilterChip]}
+            onPress={() => {
+              setFilter('recycling');
+              setSelectedFacility(null);
+              setSelectedReport(null);
+            }}
+          >
+            <Text style={[styles.filterChipText, filter === 'recycling' && styles.activeFilterChipText]}>Recycling</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.filterChip, filter === 'ewaste' && styles.activeFilterChip]}
+            onPress={() => {
+              setFilter('ewaste');
+              setSelectedFacility(null);
+              setSelectedReport(null);
+            }}
+          >
+            <Text style={[styles.filterChipText, filter === 'ewaste' && styles.activeFilterChipText]}>E-Waste</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.filterChip, filter === 'donation' && styles.activeFilterChip]}
+            onPress={() => {
+              setFilter('donation');
+              setSelectedFacility(null);
+              setSelectedReport(null);
+            }}
+          >
+            <Text style={[styles.filterChipText, filter === 'donation' && styles.activeFilterChipText]}>Donation</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.filterChip, filter === 'reports' && styles.activeFilterChip]}
+            onPress={() => {
+              setFilter('reports');
+              setSelectedFacility(null);
+              setSelectedReport(null);
+            }}
+          >
+            <Text style={[styles.filterChipText, filter === 'reports' && styles.activeFilterChipText]}>Community Reports</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+
+      {/* Empty State Overlay */}
+      {filteredFacilities.length === 0 && filteredReports.length === 0 && (
+        <View style={styles.emptyStateOverlay}>
+          <Text style={styles.emptyStateText}>No facilities or reports match your search.</Text>
+        </View>
+      )}
 
       {selectedFacility && (
         <View style={styles.detailsContainer}>
@@ -200,6 +339,87 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
+  headerContainer: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 50 : 20,
+    left: 16,
+    right: 16,
+    zIndex: 10,
+  },
+  searchBarContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 5,
+    elevation: 4,
+    height: 48,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#333',
+  },
+  clearButton: {
+    padding: 6,
+  },
+  clearButtonText: {
+    fontSize: 14,
+    color: '#999',
+    fontWeight: 'bold',
+  },
+  filterScrollView: {
+    marginTop: 12,
+  },
+  filterContent: {
+    paddingRight: 16,
+  },
+  filterChip: {
+    backgroundColor: '#FFF',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#EFEFEF',
+  },
+  activeFilterChip: {
+    backgroundColor: '#4CAF50',
+    borderColor: '#4CAF50',
+  },
+  filterChipText: {
+    fontSize: 12,
+    color: '#555',
+    fontWeight: '600',
+  },
+  activeFilterChipText: {
+    color: '#FFF',
+  },
+  emptyStateOverlay: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 170 : 140,
+    left: 32,
+    right: 32,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    alignItems: 'center',
+  },
+  emptyStateText: {
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: '500',
+  },
   detailsContainer: {
     position: 'absolute',
     bottom: 0,
@@ -209,5 +429,6 @@ const styles = StyleSheet.create({
 });
 
 export default MapScreen;
+
 
 

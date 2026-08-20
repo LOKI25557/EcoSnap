@@ -3,6 +3,7 @@ import { View, StyleSheet, ActivityIndicator, Alert, Text, useColorScheme, Platf
 import MapView from 'react-native-maps';
 import { LocationService } from '../services/location/LocationService';
 import { facilityService } from '../services/recycling/facilityService';
+import { mapsService } from '../services/location/mapsService';
 import { Facility } from '../types/Facility';
 import { FacilityMarker } from '../components/maps/FacilityMarker';
 import { FacilityDetailsCard } from '../components/maps/FacilityDetailsCard';
@@ -139,34 +140,22 @@ const MapScreen = () => {
     setSelectedReport(report);
   };
 
-  const handleNavigate = () => {
+  const handleNavigate = async () => {
     if (selectedFacility) {
       LocationAnalyticsService.trackNavigationClick();
-      const url = Platform.select({
-        ios: `maps://app?daddr=${selectedFacility.latitude},${selectedFacility.longitude}`,
-        android: `google.navigation:q=${selectedFacility.latitude},${selectedFacility.longitude}`,
-      });
-      if (url) {
-        Linking.openURL(url).catch((err) => {
-          console.error('Failed to open navigation app:', err);
-          Alert.alert('Error', 'Could not open navigation application.');
-        });
+      const success = await mapsService.launchNavigation(selectedFacility.latitude, selectedFacility.longitude);
+      if (!success) {
+        Alert.alert('Error', 'Could not open navigation application.');
       }
     }
   };
 
-  const handleNavigateReport = () => {
+  const handleNavigateReport = async () => {
     if (selectedReport && selectedReport.latitude !== undefined && selectedReport.longitude !== undefined) {
       LocationAnalyticsService.trackNavigationClick();
-      const url = Platform.select({
-        ios: `maps://app?daddr=${selectedReport.latitude},${selectedReport.longitude}`,
-        android: `google.navigation:q=${selectedReport.latitude},${selectedReport.longitude}`,
-      });
-      if (url) {
-        Linking.openURL(url).catch((err) => {
-          console.error('Failed to open navigation app:', err);
-          Alert.alert('Error', 'Could not open navigation application.');
-        });
+      const success = await mapsService.launchNavigation(selectedReport.latitude, selectedReport.longitude);
+      if (!success) {
+        Alert.alert('Error', 'Could not open navigation application.');
       }
     }
   };

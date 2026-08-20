@@ -166,6 +166,42 @@ export function generateMarkerData(
   };
 }
 
+/**
+ * Returns platform-specific navigation url for coordinates.
+ */
+export function getNavigationUrl(latitude: number, longitude: number): string {
+  const coordinate = { latitude, longitude };
+  if (!validateCoordinates(coordinate)) {
+    throw new Error('Invalid destination coordinates for navigation');
+  }
+  return Platform.select({
+    ios: `maps://app?daddr=${latitude},${longitude}`,
+    android: `google.navigation:q=${latitude},${longitude}`,
+    default: `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`,
+  });
+}
+
+/**
+ * Launches the external native maps navigation handoff.
+ */
+export async function launchNavigation(latitude: number, longitude: number): Promise<boolean> {
+  try {
+    const url = getNavigationUrl(latitude, longitude);
+    const supported = await Linking.canOpenURL(url);
+    if (supported) {
+      await Linking.openURL(url);
+      return true;
+    } else {
+      const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
+      await Linking.openURL(webUrl);
+      return true;
+    }
+  } catch (error) {
+    console.error('Error launching navigation:', error);
+    return false;
+  }
+}
+
 export const mapsService = {
   validateCoordinates,
   normalizeCoordinates,
@@ -173,4 +209,8 @@ export const mapsService = {
   calculateDistanceMeters,
   formatDistance,
   generateMarkerData,
+  getNavigationUrl,
+  launchNavigation,
 };
+import { Linking, Platform } from 'react-native';
+

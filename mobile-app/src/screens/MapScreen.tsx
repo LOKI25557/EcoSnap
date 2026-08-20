@@ -1,29 +1,29 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, StyleSheet, ActivityIndicator, Alert, Text, useColorScheme } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Alert, Text, useColorScheme, Platform, Linking } from 'react-native';
 import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
 import { LocationService } from '../services/location/LocationService';
-import { RecyclingCenterService } from '../services/recycling/RecyclingCenterService';
-import { CenterSearch, CenterWithDistance } from '../services/recycling/CenterSearch';
-import { Coordinate } from '../services/location/DistanceCalculator';
-import { CenterMarker } from '../components/maps/CenterMarker';
-import { CenterDetails } from '../components/maps/CenterDetails';
+import { facilityService } from '../services/recycling/facilityService';
+import { Facility } from '../types/Facility';
+import { FacilityMarker } from '../components/maps/FacilityMarker';
+import { FacilityDetailsCard } from '../components/maps/FacilityDetailsCard';
 import { LocationAnalyticsService } from '../services/location/LocationAnalyticsService';
+import { Coordinate } from '../services/location/DistanceCalculator';
 
 const MapScreen = () => {
   const isDarkMode = useColorScheme() === 'dark';
   const [userLocation, setUserLocation] = useState<Coordinate | null>(null);
-  const [centers, setCenters] = useState<CenterWithDistance[]>([]);
-  const [selectedCenter, setSelectedCenter] = useState<CenterWithDistance | null>(null);
+  const [facilities, setFacilities] = useState<Facility[]>([]);
+  const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchCenters = useCallback(async (location: Coordinate) => {
+  const fetchFacilities = useCallback(async (location: Coordinate) => {
     try {
-      const allCenters = await RecyclingCenterService.getAllCenters();
-      const sorted = CenterSearch.sortByNearest(allCenters, location);
-      setCenters(sorted);
+      // Search for facilities in a 10km radius
+      const nearby = await facilityService.searchNearbyFacilities(location.latitude, location.longitude, 10000);
+      setFacilities(nearby);
     } catch (error) {
-      console.error('Error fetching centers:', error);
-      Alert.alert('Error', 'Failed to load recycling centers.');
+      console.error('Error fetching facilities:', error);
+      Alert.alert('Error', 'Failed to load recycling facilities.');
     }
   }, []);
 
@@ -32,16 +32,15 @@ const MapScreen = () => {
     const location = await LocationService.getCurrentLocation();
     if (location) {
       setUserLocation(location);
-      await fetchCenters(location);
+      await fetchFacilities(location);
     } else {
       Alert.alert('Location Error', 'Could not determine your location. Showing default map view.');
-      // Load centers anyway with a default location (e.g. San Francisco)
       const defaultLoc = { latitude: 37.7749, longitude: -122.4194 };
       setUserLocation(defaultLoc);
-      await fetchCenters(defaultLoc);
+      await fetchFacilities(defaultLoc);
     }
     setLoading(false);
-  }, [fetchCenters]);
+  }, [fetchFacilities]);
 
   useEffect(() => {
     loadData();
@@ -50,15 +49,26 @@ const MapScreen = () => {
     };
   }, [loadData]);
 
-  const handleCenterPress = (center: CenterWithDistance) => {
-    setSelectedCenter(center);
-    LocationAnalyticsService.trackVisit(center.id, center.distanceKm);
+  const handleFacilityPress = (facility: Facility) => {
+    setSelectedFacility(facility);
+    if (facility.distanceMeters !== undefined) {
+      LocationAnalyticsService.trackVisit(facility.id, facility.distanceMeters / 1000);
+    }
   };
 
   const handleNavigate = () => {
-    if (selectedCenter) {
+    if (selectedFacility) {
       LocationAnalyticsService.trackNavigationClick();
-      Alert.alert('Navigation', `Navigating to ${selectedCenter.name}... (Simulation)`);
+      const url = Platform.select({
+        ios: `maps://app?daddr=${selectedFacility.latitude},${selectedFacility.longitude}`,
+        android: `google.navigation:q=${selectedFacility.latitude},${selectedFacility.longitude}`,
+      });
+      if (url) {
+        Linking.openURL(url).catch((err) => {
+          console.error('Failed to open navigation app:', err);
+          Alert.alert('Error', 'Could not open navigation application.');
+        });
+      }
     }
   };
 
@@ -85,20 +95,20 @@ const MapScreen = () => {
         showsMyLocationButton
         userInterfaceStyle={isDarkMode ? 'dark' : 'light'}
       >
-        {centers.map(center => (
-          <CenterMarker
-            key={center.id}
-            center={center}
-            onPress={() => handleCenterPress(center)}
+        {facilities.map((facility) => (
+          <FacilityMarker
+            key={facility.id}
+            facility={facility}
+            onPress={() => handleFacilityPress(facility)}
           />
         ))}
       </MapView>
 
-      {selectedCenter && (
+      {selectedFacility && (
         <View style={styles.detailsContainer}>
-          <CenterDetails
-            center={selectedCenter}
-            onClose={() => setSelectedCenter(null)}
+          <FacilityDetailsCard
+            facility={selectedFacility}
+            onClose={() => setSelectedFacility(null)}
             onNavigate={handleNavigate}
           />
         </View>
@@ -134,3 +144,4 @@ const styles = StyleSheet.create({
 });
 
 export default MapScreen;
+

@@ -1,22 +1,59 @@
 import * as Location from 'expo-location';
-import { PermissionService } from './PermissionService';
 import { Coordinate } from './DistanceCalculator';
+
+export type LocationPermissionResult = 'granted' | 'denied' | 'blocked' | 'undetermined';
 
 class LocationServiceImpl {
   private lastKnownLocation: Coordinate | null = null;
   private locationSubscription: Location.LocationSubscription | null = null;
 
   /**
+   * Requests foreground location permission.
+   */
+  async requestLocationPermission(): Promise<LocationPermissionResult> {
+    try {
+      const { status, canAskAgain } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') return 'granted';
+      if (!canAskAgain) return 'blocked';
+      return 'denied';
+    } catch (error) {
+      console.error('Error requesting location permission:', error);
+      return 'denied';
+    }
+  }
+
+  /**
+   * Checks the current foreground location permission status.
+   */
+  async getLocationPermissionStatus(): Promise<LocationPermissionResult> {
+    try {
+      const { status, canAskAgain } = await Location.getForegroundPermissionsAsync();
+      if (status === 'granted') return 'granted';
+      if (status === 'undetermined') return 'undetermined';
+      if (!canAskAgain) return 'blocked';
+      return 'denied';
+    } catch (error) {
+      console.error('Error checking location permission status:', error);
+      return 'undetermined';
+    }
+  }
+
+  /**
+   * Checks if foreground location permission is granted.
+   */
+  async hasLocationPermission(): Promise<boolean> {
+    const status = await this.getLocationPermissionStatus();
+    return status === 'granted';
+  }
+
+  /**
    * Retrieves the current location, using cached if GPS is unavailable or fails.
    */
   async getCurrentLocation(): Promise<Coordinate | null> {
-    const hasPermission = await PermissionService.checkForegroundPermission();
+    const hasPermission = await this.hasLocationPermission();
     if (!hasPermission) {
-      const granted = await PermissionService.requestForegroundPermission();
-      if (!granted) {
-        console.warn('Location permission denied.');
-        return this.lastKnownLocation; // Graceful fallback
-      }
+      console.warn('Location permission not granted. Returning last known location.');
+      return this.lastKnownLocation;
     }
 
     try {
@@ -50,8 +87,9 @@ class LocationServiceImpl {
    * Watches the user's location and calls the callback on updates.
    */
   async watchLocation(callback: (location: Coordinate) => void): Promise<void> {
-    const hasPermission = await PermissionService.checkForegroundPermission();
+    const hasPermission = await this.hasLocationPermission();
     if (!hasPermission) {
+      console.warn('Location permission not granted. Cannot watch location.');
       return;
     }
 
@@ -100,3 +138,4 @@ class LocationServiceImpl {
 
 // Export as singleton
 export const LocationService = new LocationServiceImpl();
+

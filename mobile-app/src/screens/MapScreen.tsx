@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, StyleSheet, ActivityIndicator, Alert, Text, useColorScheme, Platform, Linking } from 'react-native';
-import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView from 'react-native-maps';
 import { LocationService } from '../services/location/LocationService';
 import { facilityService } from '../services/recycling/facilityService';
 import { Facility } from '../types/Facility';
@@ -8,12 +8,19 @@ import { FacilityMarker } from '../components/maps/FacilityMarker';
 import { FacilityDetailsCard } from '../components/maps/FacilityDetailsCard';
 import { LocationAnalyticsService } from '../services/location/LocationAnalyticsService';
 import { Coordinate } from '../services/location/DistanceCalculator';
+import { authService } from '../services/firebase/authService';
+import { communityReportRepository } from '../services/firebase/communityReportRepository';
+import { CommunityReport } from '../types/CommunityReport';
+import { CommunityReportMarker } from '../components/maps/CommunityReportMarker';
+import { CommunityReportDetailsCard } from '../components/maps/CommunityReportDetailsCard';
 
 const MapScreen = () => {
   const isDarkMode = useColorScheme() === 'dark';
   const [userLocation, setUserLocation] = useState<Coordinate | null>(null);
   const [facilities, setFacilities] = useState<Facility[]>([]);
+  const [reports, setReports] = useState<CommunityReport[]>([]);
   const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null);
+  const [selectedReport, setSelectedReport] = useState<CommunityReport | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchFacilities = useCallback(async (location: Coordinate) => {
@@ -27,20 +34,38 @@ const MapScreen = () => {
     }
   }, []);
 
+  const fetchReports = useCallback(async () => {
+    const user = authService.getCurrentUser();
+    if (!user) return;
+
+    try {
+      const response = await communityReportRepository.list({ userId: user.uid });
+      setReports(response.items);
+    } catch (error) {
+      console.error('Error fetching community reports:', error);
+    }
+  }, []);
+
   const loadData = useCallback(async () => {
     setLoading(true);
     const location = await LocationService.getCurrentLocation();
     if (location) {
       setUserLocation(location);
-      await fetchFacilities(location);
+      await Promise.all([
+        fetchFacilities(location),
+        fetchReports(),
+      ]);
     } else {
       Alert.alert('Location Error', 'Could not determine your location. Showing default map view.');
       const defaultLoc = { latitude: 37.7749, longitude: -122.4194 };
       setUserLocation(defaultLoc);
-      await fetchFacilities(defaultLoc);
+      await Promise.all([
+        fetchFacilities(defaultLoc),
+        fetchReports(),
+      ]);
     }
     setLoading(false);
-  }, [fetchFacilities]);
+  }, [fetchFacilities, fetchReports]);
 
   useEffect(() => {
     loadData();
@@ -50,10 +75,16 @@ const MapScreen = () => {
   }, [loadData]);
 
   const handleFacilityPress = (facility: Facility) => {
+    setSelectedReport(null);
     setSelectedFacility(facility);
     if (facility.distanceMeters !== undefined) {
       LocationAnalyticsService.trackVisit(facility.id, facility.distanceMeters / 1000);
     }
+  };
+
+  const handleReportPress = (report: CommunityReport) => {
+    setSelectedFacility(null);
+    setSelectedReport(report);
   };
 
   const handleNavigate = () => {
@@ -62,6 +93,22 @@ const MapScreen = () => {
       const url = Platform.select({
         ios: `maps://app?daddr=${selectedFacility.latitude},${selectedFacility.longitude}`,
         android: `google.navigation:q=${selectedFacility.latitude},${selectedFacility.longitude}`,
+      });
+      if (url) {
+        Linking.openURL(url).catch((err) => {
+          console.error('Failed to open navigation app:', err);
+          Alert.alert('Error', 'Could not open navigation application.');
+        });
+      }
+    }
+  };
+
+  const handleNavigateReport = () => {
+    if (selectedReport && selectedReport.latitude !== undefined && selectedReport.longitude !== undefined) {
+      LocationAnalyticsService.trackNavigationClick();
+      const url = Platform.select({
+        ios: `maps://app?daddr=${selectedReport.latitude},${selectedReport.longitude}`,
+        android: `google.navigation:q=${selectedReport.latitude},${selectedReport.longitude}`,
       });
       if (url) {
         Linking.openURL(url).catch((err) => {
@@ -102,6 +149,14 @@ const MapScreen = () => {
             onPress={() => handleFacilityPress(facility)}
           />
         ))}
+
+        {reports.map((report) => (
+          <CommunityReportMarker
+            key={report.id}
+            report={report}
+            onPress={() => handleReportPress(report)}
+          />
+        ))}
       </MapView>
 
       {selectedFacility && (
@@ -110,6 +165,16 @@ const MapScreen = () => {
             facility={selectedFacility}
             onClose={() => setSelectedFacility(null)}
             onNavigate={handleNavigate}
+          />
+        </View>
+      )}
+
+      {selectedReport && (
+        <View style={styles.detailsContainer}>
+          <CommunityReportDetailsCard
+            report={selectedReport}
+            onClose={() => setSelectedReport(null)}
+            onNavigate={handleNavigateReport}
           />
         </View>
       )}
@@ -144,4 +209,5 @@ const styles = StyleSheet.create({
 });
 
 export default MapScreen;
+
 

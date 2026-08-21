@@ -63,3 +63,20 @@ export const REPORT_STATUS_VALUES = [
   'resolved',
   'rejected'
 ] as const;
+
+// Facility-specific constants
+export const FACILITY_SEARCH_DEFAULTS = {
+  DEFAULT_RADIUS: 10000, // 10km
+  MAX_RADIUS: 100000,    // 100km
+} as const;
+
+export const FACILITY_QUERY_DEFAULTS = {
+  DEFAULT_LIMIT: 10,
+  MAX_LIMIT: 50,
+} as const;
+
+export const FACILITY_TYPES = [
+  'recycling_center',
+  'ewaste_facility',
+  'donation_center'
+] as const;

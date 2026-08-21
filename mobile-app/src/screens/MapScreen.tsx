@@ -86,7 +86,7 @@ const MapScreen = () => {
     if (filter === 'recycling') {
       result = result.filter((f) => f.type === 'recycling_center');
     } else if (filter === 'ewaste') {
-      result = result.filter((f) => f.type === 'ewaste_facility' || f.type === 'e_waste_center');
+      result = result.filter((f) => f.type === 'ewaste_facility');
     } else if (filter === 'donation') {
       result = result.filter((f) => f.type === 'donation_center');
     } else if (filter === 'reports') {

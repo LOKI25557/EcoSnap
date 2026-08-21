@@ -12,15 +12,12 @@ export const FacilityMarker: React.FC<FacilityMarkerProps> = ({ facility, onPres
   let markerColor = '#4CAF50'; // Default: recycling_center
   let containerColor = 'rgba(76, 175, 80, 0.3)';
 
-  if (facility.type === 'ewaste_facility' || facility.type === 'e_waste_center') {
+  if (facility.type === 'ewaste_facility') {
     markerColor = '#FF9800'; // Orange
     containerColor = 'rgba(255, 152, 0, 0.3)';
   } else if (facility.type === 'donation_center') {
     markerColor = '#9C27B0'; // Purple
     containerColor = 'rgba(156, 39, 176, 0.3)';
-  } else if (facility.type === 'collection_point') {
-    markerColor = '#2196F3'; // Blue
-    containerColor = 'rgba(33, 150, 243, 0.3)';
   }
 
   return (

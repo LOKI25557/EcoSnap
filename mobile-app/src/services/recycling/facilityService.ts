@@ -78,15 +78,9 @@ export class LocalFacilityProvider implements FacilityProvider {
 
     const center = { latitude, longitude };
     return MOCK_FACILITIES.filter((f) => {
-      // Map legacy/alternative types if matching type parameter
       let fType = f.type;
       if (type && fType !== type) {
-        // Compatibility mapping: if searching for ewaste_facility, also map e_waste_center
-        if (type === 'ewaste_facility' && fType === 'e_waste_center') {
-          // match
-        } else {
-          return false;
-        }
+        return false;
       }
 
       const distance = mapsService.calculateDistanceMeters(center, {

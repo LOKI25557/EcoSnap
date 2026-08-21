@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Linking, ScrollView } from 'react-native';
-import { Facility } from '../../types/Facility';
+import { Facility, FacilityType } from '../../types/Facility';
 import { mapsService } from '../../services/location/mapsService';
 
 interface FacilityDetailsCardProps {
@@ -27,35 +27,46 @@ export const FacilityDetailsCard: React.FC<FacilityDetailsCardProps> = ({
   };
 
   // Get display type
-  const getTypeDisplay = (type: string) => {
+  const getTypeDisplay = (type: FacilityType) => {
     switch (type) {
       case 'recycling_center':
         return 'Recycling Center';
       case 'ewaste_facility':
-      case 'e_waste_center':
         return 'E-Waste Facility';
       case 'donation_center':
         return 'Donation Center';
-      case 'collection_point':
-        return 'Collection Point';
       default:
         return 'Facility';
     }
   };
 
   // Get color for type badge
-  const getTypeBadgeColor = (type: string) => {
+  const getTypeBadgeColor = (type: FacilityType) => {
     switch (type) {
       case 'recycling_center':
         return '#4CAF50';
       case 'ewaste_facility':
-      case 'e_waste_center':
         return '#FF9800';
       case 'donation_center':
         return '#9C27B0';
       default:
         return '#2196F3';
     }
+  };
+
+  const formatOpeningHours = (oh: any) => {
+    if (!oh) return '';
+    if (typeof oh === 'string') return oh;
+    if (oh.is24Hours) return 'Open 24 Hours';
+    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    return days
+      .map((day) => {
+        const range = oh[day];
+        const dayLabel = day.charAt(0).toUpperCase() + day.slice(1);
+        if (!range) return `${dayLabel}: Closed`;
+        return `${dayLabel}: ${range.open} - ${range.close}`;
+      })
+      .join('\n');
   };
 
   const distanceText = facility.distanceMeters !== undefined 
@@ -96,7 +107,7 @@ export const FacilityDetailsCard: React.FC<FacilityDetailsCardProps> = ({
         {facility.openingHours ? (
           <>
             <Text style={styles.sectionTitle}>Opening Hours</Text>
-            <Text style={styles.text}>{facility.openingHours}</Text>
+            <Text style={styles.text}>{formatOpeningHours(facility.openingHours)}</Text>
           </>
         ) : null}
 

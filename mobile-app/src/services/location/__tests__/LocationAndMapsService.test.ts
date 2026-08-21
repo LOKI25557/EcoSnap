@@ -133,6 +133,10 @@ describe('Location and Map Services Tests', () => {
   });
 
   describe('Facility Search & Filtering', () => {
+    beforeAll(() => {
+      facilityService.setProvider(new LocalFacilityProvider());
+    });
+
     test('should search nearby mock facilities inside radius', async () => {
       // SF green earth recycling center coordinates: 37.7749, -122.4194
       // We search with a small radius of 100 meters

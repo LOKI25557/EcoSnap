@@ -383,4 +383,4 @@ class FacilityServiceImpl {
   }
 }
 
-export const facilityService = new FacilityServiceImpl(new LocalFacilityProvider());
+export const facilityService = new FacilityServiceImpl(new FirestoreFacilityProvider());

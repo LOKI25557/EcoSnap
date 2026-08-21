@@ -101,6 +101,16 @@ export const FacilityDetailsCard: React.FC<FacilityDetailsCardProps> = ({
           ) : null}
         </View>
 
+        {facility.rating !== undefined && facility.rating > 0 ? (
+          <View style={styles.ratingRow}>
+            <Text style={styles.ratingText}>⭐️ {facility.rating.toFixed(1)} ({facility.reviewCount || 0} reviews)</Text>
+          </View>
+        ) : (
+          <View style={styles.ratingRow}>
+            <Text style={styles.ratingText}>⭐️ No ratings yet</Text>
+          </View>
+        )}
+
         <Text style={styles.sectionTitle}>Address</Text>
         <Text style={styles.text}>{facility.address}</Text>
 
@@ -199,6 +209,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 16,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  ratingText: {
+    fontSize: 13,
+    color: '#FF9800',
+    fontWeight: '600',
   },
   typeBadge: {
     paddingHorizontal: 10,

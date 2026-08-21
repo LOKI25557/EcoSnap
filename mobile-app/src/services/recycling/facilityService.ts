@@ -164,6 +164,39 @@ export function validateFacility(facility: any, isUpdate = false, adminOverride 
   }
 }
 
+export function isFacilityOpen(facility: Facility, date = new Date()): boolean {
+  const oh = facility.openingHours;
+  if (!oh) return false;
+  if (typeof oh === 'string') {
+    return oh.toLowerCase().includes('24');
+  }
+
+  if (oh.is24Hours) return true;
+
+  const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase() as
+    | 'monday'
+    | 'tuesday'
+    | 'wednesday'
+    | 'thursday'
+    | 'friday'
+    | 'saturday'
+    | 'sunday';
+
+  const range = oh[dayOfWeek];
+  if (!range) return false; // Closed today
+
+  const openTime = range.open;
+  const closeTime = range.close;
+
+  if (!openTime || !closeTime) return false;
+
+  const currentHours = date.getHours().toString().padStart(2, '0');
+  const currentMinutes = date.getMinutes().toString().padStart(2, '0');
+  const currentTimeStr = `${currentHours}:${currentMinutes}`;
+
+  return currentTimeStr >= openTime && currentTimeStr <= closeTime;
+}
+
 export class LocalFacilityProvider implements FacilityProvider {
   async searchNearby(
     latitude: number,
@@ -284,6 +317,10 @@ class FacilityServiceImpl {
     }
     const result = await facilityRepository.list({ type, activeOnly: true, limit: 50 });
     return result.items;
+  }
+
+  isFacilityOpen(facility: Facility, date = new Date()): boolean {
+    return isFacilityOpen(facility, date);
   }
 
   async searchNearbyFacilities(

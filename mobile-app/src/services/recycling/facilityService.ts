@@ -261,6 +261,31 @@ class FacilityServiceImpl {
     await facilityRepository.update(id, updates);
   }
 
+  async getFacilityById(id: string): Promise<Facility | null> {
+    if (!id || typeof id !== 'string' || id.trim() === '') {
+      throw new Error('Invalid facility ID: must be a non-empty string');
+    }
+    return await facilityRepository.get(id);
+  }
+
+  async listFacilities(filters?: {
+    type?: FacilityType;
+    activeOnly?: boolean;
+    verifiedOnly?: boolean;
+    limit?: number;
+    cursor?: any;
+  }): Promise<{ items: Facility[]; lastVisible: any | null }> {
+    return await facilityRepository.list(filters);
+  }
+
+  async getFacilitiesByType(type: FacilityType): Promise<Facility[]> {
+    if (!type || !['recycling_center', 'ewaste_facility', 'donation_center'].includes(type)) {
+      throw new Error('Invalid type: must be one of recycling_center, ewaste_facility, donation_center');
+    }
+    const result = await facilityRepository.list({ type, activeOnly: true, limit: 50 });
+    return result.items;
+  }
+
   async searchNearbyFacilities(
     latitude: number,
     longitude: number,

@@ -381,6 +381,88 @@ class FacilityServiceImpl {
       throw error;
     }
   }
+
+  async searchFacilities(params: {
+    query?: string;
+    type?: FacilityType;
+    material?: string;
+    verifiedOnly?: boolean;
+    activeOnly?: boolean;
+    latitude?: number;
+    longitude?: number;
+    radiusMeters?: number;
+    limit?: number;
+    cursor?: any;
+  }): Promise<{ items: Facility[]; lastVisible: any | null }> {
+    if (params.radiusMeters !== undefined && (params.radiusMeters <= 0 || params.radiusMeters > 100000)) {
+      throw new Error('Invalid radius: must be between 1 and 100000 meters');
+    }
+    if (params.latitude !== undefined || params.longitude !== undefined) {
+      if (params.latitude === undefined || params.longitude === undefined) {
+        throw new Error('Both latitude and longitude are required for location filtering');
+      }
+      if (!mapsService.validateCoordinates({ latitude: params.latitude, longitude: params.longitude })) {
+        throw new Error('Invalid coordinates for search');
+      }
+    }
+
+    try {
+      const listParams = {
+        type: params.type,
+        activeOnly: params.activeOnly ?? true,
+        verifiedOnly: params.verifiedOnly,
+        limit: params.limit || 50,
+        cursor: params.cursor,
+      };
+
+      const result = await facilityRepository.list(listParams);
+      let items = result.items;
+
+      if (params.query && params.query.trim()) {
+        const q = params.query.trim().toLowerCase();
+        items = items.filter(
+          (f) =>
+            f.name.toLowerCase().includes(q) ||
+            f.address.toLowerCase().includes(q) ||
+            (f.description && f.description.toLowerCase().includes(q))
+        );
+      }
+
+      if (params.material && params.material.trim()) {
+        const m = params.material.trim().toLowerCase();
+        items = items.filter(
+          (f) =>
+            f.acceptedMaterials &&
+            f.acceptedMaterials.some((mat) => mat.toLowerCase().includes(m))
+        );
+      }
+
+      if (params.latitude !== undefined && params.longitude !== undefined) {
+        const center = { latitude: params.latitude, longitude: params.longitude };
+        const radius = params.radiusMeters || 10000;
+
+        items = items
+          .map((f) => {
+            const dist = mapsService.calculateDistanceMeters(center, {
+              latitude: f.latitude,
+              longitude: f.longitude,
+            });
+            return { ...f, distanceMeters: dist };
+          })
+          .filter((f) => f.distanceMeters !== undefined && f.distanceMeters <= radius);
+
+        items.sort((a, b) => (a.distanceMeters || 0) - (b.distanceMeters || 0));
+      }
+
+      return {
+        items,
+        lastVisible: result.lastVisible,
+      };
+    } catch (error) {
+      console.error('Error in searchFacilities:', error);
+      throw error;
+    }
+  }
 }
 
 export const facilityService = new FacilityServiceImpl(new FirestoreFacilityProvider());

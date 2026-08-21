@@ -71,7 +71,7 @@ const MOCK_FACILITIES: Facility[] = [
   },
 ];
 
-export function validateFacility(facility: any, isUpdate = false, adminOverride = false) {
+export function validateFacility(facility: any, isUpdate = false, adminOverride = false, currentStatus?: string) {
   // Common validations
   if (!isUpdate) {
     if (!facility.name || typeof facility.name !== 'string' || facility.name.trim() === '') {
@@ -148,6 +148,10 @@ export function validateFacility(facility: any, isUpdate = false, adminOverride 
     }
   }
 
+  if (facility.status !== undefined && !['pending', 'review', 'verified', 'active', 'inactive', 'suspended'].includes(facility.status)) {
+    throw new Error('Invalid status: must be one of pending, review, verified, active, inactive, suspended');
+  }
+
   // Privileged fields validation
   if (!adminOverride) {
     if (facility.verified !== undefined && facility.verified !== false) {
@@ -161,6 +165,24 @@ export function validateFacility(facility: any, isUpdate = false, adminOverride 
     }
     if (facility.status !== undefined && facility.status !== 'pending') {
       throw new Error('Permission denied: Ordinary users cannot set facility status');
+    }
+  }
+
+  const VALID_TRANSITIONS: Record<string, string[]> = {
+    pending: ['review', 'inactive'],
+    review: ['verified', 'inactive'],
+    verified: ['active', 'inactive'],
+    active: ['inactive', 'suspended'],
+    suspended: ['active', 'inactive'],
+    inactive: ['pending', 'review', 'active'],
+  };
+
+  if (isUpdate && facility.status !== undefined && currentStatus !== undefined) {
+    if (currentStatus !== facility.status) {
+      const allowed = VALID_TRANSITIONS[currentStatus] || [];
+      if (!allowed.includes(facility.status)) {
+        throw new Error(`Invalid status transition from ${currentStatus} to ${facility.status}`);
+      }
     }
   }
 }
@@ -290,7 +312,7 @@ class FacilityServiceImpl {
       throw new Error('Facility not found');
     }
 
-    validateFacility(updates, true, adminOverride);
+    validateFacility(updates, true, adminOverride, existing.status);
 
     await facilityRepository.update(id, updates);
   }
@@ -347,6 +369,22 @@ class FacilityServiceImpl {
       averageRating: avg,
       reviewCount: count,
     };
+  }
+
+  async checkDuplicate(name: string, latitude: number, longitude: number): Promise<Facility | null> {
+    const result = await facilityRepository.list({ activeOnly: true, limit: 100 });
+    const center = { latitude, longitude };
+
+    const duplicates = result.items.filter((f) => {
+      const nameMatch = f.name.toLowerCase().trim() === name.toLowerCase().trim();
+      const dist = mapsService.calculateDistanceMeters(center, {
+        latitude: f.latitude,
+        longitude: f.longitude,
+      });
+      return nameMatch || dist <= 100;
+    });
+
+    return duplicates.length > 0 ? duplicates[0] : null;
   }
 
   async searchNearbyFacilities(

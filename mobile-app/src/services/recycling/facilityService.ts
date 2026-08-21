@@ -1,6 +1,7 @@
 import { Facility, FacilityType, OpeningHours } from '../../types/Facility';
 import { mapsService } from '../location/mapsService';
 import { facilityRepository } from '../firebase/facilityRepository';
+import { firestoreService } from '../firebase/firestoreService';
 
 export interface FacilityProvider {
   searchNearby(
@@ -321,6 +322,31 @@ class FacilityServiceImpl {
 
   isFacilityOpen(facility: Facility, date = new Date()): boolean {
     return isFacilityOpen(facility, date);
+  }
+
+  async getFacilityRating(facilityId: string): Promise<{ averageRating: number; reviewCount: number }> {
+    const facility = await this.getFacilityById(facilityId);
+    if (!facility) {
+      throw new Error('Facility not found');
+    }
+
+    if (facility.rating !== undefined && facility.reviewCount !== undefined) {
+      return {
+        averageRating: facility.rating,
+        reviewCount: facility.reviewCount,
+      };
+    }
+
+    const reviewsResult = await firestoreService.getFacilityReviews(facilityId);
+    let total = 0;
+    reviewsResult.items.forEach((r) => (total += r.rating));
+    const count = reviewsResult.items.length;
+    const avg = count > 0 ? Math.round((total / count) * 10) / 10 : 0;
+
+    return {
+      averageRating: avg,
+      reviewCount: count,
+    };
   }
 
   async searchNearbyFacilities(

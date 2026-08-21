@@ -1,6 +1,6 @@
-import { Facility, FacilityType } from '../../types/Facility';
+import { Facility, FacilityType, OpeningHours } from '../../types/Facility';
 import { mapsService } from '../location/mapsService';
-import { firestoreService } from '../firebase/firestoreService';
+import { facilityRepository } from '../firebase/facilityRepository';
 
 export interface FacilityProvider {
   searchNearby(
@@ -24,6 +24,7 @@ const MOCK_FACILITIES: Facility[] = [
     openingHours: 'Mon-Fri: 8AM-5PM, Sat: 9AM-2PM',
     acceptedMaterials: ['plastic', 'glass', 'paper', 'cardboard'],
     verified: true,
+    isActive: true,
   },
   {
     id: '2',
@@ -37,6 +38,7 @@ const MOCK_FACILITIES: Facility[] = [
     openingHours: 'Mon-Sat: 10AM-6PM',
     acceptedMaterials: ['electronic', 'battery', 'metal'],
     verified: true,
+    isActive: true,
   },
   {
     id: '3',
@@ -50,6 +52,7 @@ const MOCK_FACILITIES: Facility[] = [
     openingHours: 'Tue-Sun: 7AM-3PM',
     acceptedMaterials: ['organic', 'compost', 'wood'],
     verified: false,
+    isActive: true,
   },
   {
     id: '4',
@@ -63,8 +66,103 @@ const MOCK_FACILITIES: Facility[] = [
     openingHours: 'Mon-Sun: 9AM-5PM',
     acceptedMaterials: ['clothing', 'furniture', 'book'],
     verified: true,
+    isActive: true,
   },
 ];
+
+export function validateFacility(facility: any, isUpdate = false, adminOverride = false) {
+  // Common validations
+  if (!isUpdate) {
+    if (!facility.name || typeof facility.name !== 'string' || facility.name.trim() === '') {
+      throw new Error('Invalid name: must be a non-empty string');
+    }
+    if (!facility.type || !['recycling_center', 'ewaste_facility', 'donation_center'].includes(facility.type)) {
+      throw new Error('Invalid type: must be one of recycling_center, ewaste_facility, donation_center');
+    }
+    if (!facility.address || typeof facility.address !== 'string' || facility.address.trim() === '') {
+      throw new Error('Invalid address: must be a non-empty string');
+    }
+    if (facility.latitude === undefined || facility.longitude === undefined) {
+      throw new Error('Coordinates are required');
+    }
+  }
+
+  if (facility.name !== undefined && (typeof facility.name !== 'string' || facility.name.trim() === '')) {
+    throw new Error('Invalid name: must be a non-empty string');
+  }
+
+  if (facility.type !== undefined && !['recycling_center', 'ewaste_facility', 'donation_center'].includes(facility.type)) {
+    throw new Error('Invalid type: must be one of recycling_center, ewaste_facility, donation_center');
+  }
+
+  if (facility.address !== undefined && (typeof facility.address !== 'string' || facility.address.trim() === '')) {
+    throw new Error('Invalid address: must be a non-empty string');
+  }
+
+  // Coordinates validation
+  if (facility.latitude !== undefined || facility.longitude !== undefined) {
+    const lat = facility.latitude;
+    const lon = facility.longitude;
+
+    if (typeof lat !== 'number' || typeof lon !== 'number' || isNaN(lat) || isNaN(lon) || !isFinite(lat) || !isFinite(lon)) {
+      throw new Error('Invalid coordinates: latitude and longitude must be valid finite numbers');
+    }
+
+    if (lat < -90 || lat > 90) {
+      throw new Error('Invalid latitude: must be between -90 and 90');
+    }
+
+    if (lon < -180 || lon > 180) {
+      throw new Error('Invalid longitude: must be between -180 and 180');
+    }
+  }
+
+  // Accepted Materials validation
+  if (facility.acceptedMaterials !== undefined) {
+    if (!Array.isArray(facility.acceptedMaterials)) {
+      throw new Error('Invalid acceptedMaterials: must be an array of strings');
+    }
+    facility.acceptedMaterials.forEach((material: any) => {
+      if (typeof material !== 'string' || material.trim() === '') {
+        throw new Error('Invalid material: must be a non-empty string');
+      }
+    });
+  }
+
+  // Opening Hours validation
+  if (facility.openingHours !== undefined && facility.openingHours !== null) {
+    if (typeof facility.openingHours === 'object') {
+      const oh = facility.openingHours;
+      const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+      days.forEach((day) => {
+        const val = oh[day];
+        if (val !== undefined && val !== null) {
+          if (typeof val.open !== 'string' || typeof val.close !== 'string') {
+            throw new Error(`Invalid opening hours for ${day}: open and close times must be strings`);
+          }
+        }
+      });
+    } else if (typeof facility.openingHours !== 'string') {
+      throw new Error('Invalid openingHours: must be a structured object or a string');
+    }
+  }
+
+  // Privileged fields validation
+  if (!adminOverride) {
+    if (facility.verified !== undefined && facility.verified !== false) {
+      throw new Error('Permission denied: Ordinary users cannot verify facilities');
+    }
+    if (facility.rating !== undefined && facility.rating !== 0) {
+      throw new Error('Permission denied: Ordinary users cannot modify facility rating');
+    }
+    if (facility.reviewCount !== undefined && facility.reviewCount !== 0) {
+      throw new Error('Permission denied: Ordinary users cannot modify facility reviewCount');
+    }
+    if (facility.status !== undefined && facility.status !== 'pending') {
+      throw new Error('Permission denied: Ordinary users cannot set facility status');
+    }
+  }
+}
 
 export class LocalFacilityProvider implements FacilityProvider {
   async searchNearby(
@@ -104,7 +202,7 @@ export class FirestoreFacilityProvider implements FacilityProvider {
     radiusMeters: number,
     type?: FacilityType
   ): Promise<Facility[]> {
-    const result = await firestoreService.getFacilities(type);
+    const result = await facilityRepository.list({ type, activeOnly: true, limit: 50 });
     const center = { latitude, longitude };
 
     return result.items
@@ -128,6 +226,39 @@ class FacilityServiceImpl {
 
   setProvider(provider: FacilityProvider) {
     this.provider = provider;
+  }
+
+  async createFacility(
+    input: Omit<Facility, 'id' | 'createdAt' | 'updatedAt'>,
+    adminOverride = false
+  ): Promise<string> {
+    validateFacility(input, false, adminOverride);
+
+    const facilityData = {
+      ...input,
+      verified: input.verified ?? false,
+      rating: input.rating ?? 0,
+      reviewCount: input.reviewCount ?? 0,
+      status: input.status ?? 'pending',
+      isActive: input.isActive ?? true,
+    };
+
+    return await facilityRepository.create(facilityData);
+  }
+
+  async updateFacility(
+    id: string,
+    updates: Partial<Facility>,
+    adminOverride = false
+  ): Promise<void> {
+    const existing = await facilityRepository.get(id);
+    if (!existing) {
+      throw new Error('Facility not found');
+    }
+
+    validateFacility(updates, true, adminOverride);
+
+    await facilityRepository.update(id, updates);
   }
 
   async searchNearbyFacilities(

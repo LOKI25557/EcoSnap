@@ -5,6 +5,13 @@ import { mapsService } from '../mapsService';
 import { facilityService, LocalFacilityProvider, FirestoreFacilityProvider } from '../../recycling/facilityService';
 import { firestoreService } from '../../firebase/firestoreService';
 
+// Mock firebaseConfig to bypass environment variable check
+jest.mock('../../firebase/firebaseConfig', () => ({
+  db: {},
+  auth: {},
+  storage: {},
+}));
+
 // Mock expo-location
 jest.mock('expo-location', () => ({
   requestForegroundPermissionsAsync: jest.fn(),

@@ -16,7 +16,7 @@ export interface OpeningHours {
   is24Hours?: boolean;
 }
 
-export type FacilityStatus = 'active' | 'inactive' | 'pending' | 'suspended';
+export type FacilityStatus = 'active' | 'inactive' | 'pending' | 'suspended' | 'review' | 'verified';
 
 export interface Facility {
   id: string;

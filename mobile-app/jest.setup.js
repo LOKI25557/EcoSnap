@@ -16,7 +16,13 @@ jest.mock('firebase/firestore', () => ({
   orderBy: jest.fn(),
   limit: jest.fn(),
   startAfter: jest.fn(),
-  getDocs: jest.fn(() => ({ docs: [] })),
+  getDocs: jest.fn(() => {
+    const docs = [];
+    return {
+      docs,
+      forEach: (cb) => docs.forEach(cb),
+    };
+  }),
   serverTimestamp: jest.fn(() => new Date()),
 }));
 

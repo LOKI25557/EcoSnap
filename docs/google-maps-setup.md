@@ -56,9 +56,31 @@ We implement a decoupled provider pattern for facility searches. This ensures th
 - **`FirestoreFacilityProvider`:** Queries the root level `facilities` collection in Firestore.
 
 ---
-
-## 4. Privacy & Data Integrity
-
-1. **Reporter Privacy:** When mapping community reports on the map, only user-facing details (type, description, status, creation date, approximate address) are exposed. Authentication IDs, emails, and phone numbers are hidden.
-2. **Coordinate Validation:** All coordinate handling processes validate that latitudes are in `[-90, 90]` and longitudes are in `[-180, 180]` to avoid corrupting map rendering or failing external maps navigation handoff.
-3. **External Navigation Handoff:** Universal map schemes (`maps://` for iOS and `google.navigation:q=` for Android) are dynamically selected and validated to securely hand off turn-by-turn navigation to native mapping apps without custom routing overhead.
+ 
+ ## 5. Production Security & API Restrictions
+ 
+ To safeguard your Google Maps API Keys in a production environment, you must configure restrictions on the **Google Cloud Console**. This prevents unauthorized usage of your API keys.
+ 
+ ### 5.1 Platform Restrictions
+ 1. **Android Key:**
+    - Restrict usage to the **Android app** platform.
+    - Specify your package name: `com.pravee.ecosnap`.
+    - Provide the SHA-1 fingerprint of your production signing certificate (obtainable from Expo dashboard or EAS build credentials).
+ 2. **iOS Key:**
+    - Restrict usage to the **iOS app** platform.
+    - Specify your iOS Bundle Identifier: `com.pravee.ecosnap`.
+ 
+ ### 5.2 API Restrictions
+ Do not allow the API keys to access any services other than:
+ - **Maps SDK for Android**
+ - **Maps SDK for iOS**
+ 
+ *Never enable server-side APIs like Distance Matrix API, Geocoding API, or Places API on client-facing keys.* All distance calculations must be done client-side using coordinate calculations (Haversine formula in `mapsService.ts`) or routed through a secure backend cloud function.
+ 
+ ---
+ 
+ ## 6. Privacy & Data Integrity
+ 
+ 1. **Reporter Privacy:** When mapping community reports on the map, only user-facing details (type, description, status, creation date, approximate address) are exposed. Authentication IDs, emails, and phone numbers are hidden.
+ 2. **Coordinate Validation:** All coordinate handling processes validate that latitudes are in `[-90, 90]` and longitudes are in `[-180, 180]` to avoid corrupting map rendering or failing external maps navigation handoff.
+ 3. **External Navigation Handoff:** Universal map schemes (`maps://` for iOS and `google.navigation:q=` for Android) are dynamically selected and validated to securely hand off turn-by-turn navigation to native mapping apps without custom routing overhead.

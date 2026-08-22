@@ -152,7 +152,10 @@ export function validateFacility(facility: any, isUpdate = false, adminOverride 
     throw new Error('Invalid status: must be one of pending, review, verified, active, inactive, suspended');
   }
 
-  // Privileged fields validation
+  // Privileged fields validation: Enforce strict constraints to prevent clients
+  // from self-verifying, editing ratings, or modifying review count directly.
+  // These operations are protected client-side via this validation and server-side
+  // using Firestore rules that block direct writes to the facilities collection.
   if (!adminOverride) {
     if (facility.verified !== undefined && facility.verified !== false) {
       throw new Error('Permission denied: Ordinary users cannot verify facilities');
@@ -352,7 +355,7 @@ class FacilityServiceImpl {
       throw new Error('Facility not found');
     }
 
-    if (facility.rating !== undefined && facility.reviewCount !== undefined) {
+    if (facility.rating !== undefined && facility.reviewCount !== undefined && facility.reviewCount > 0) {
       return {
         averageRating: facility.rating,
         reviewCount: facility.reviewCount,

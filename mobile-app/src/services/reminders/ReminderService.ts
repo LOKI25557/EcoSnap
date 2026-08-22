@@ -28,17 +28,21 @@ class ReminderService {
   private remindersCache: Reminder[] | null = null;
 
   async init(): Promise<void> {
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
+    try {
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+      if (finalStatus !== 'granted') {
+        console.warn('Failed to get permissions for push notification!');
+        return;
+      }
+      await this.scheduleAllEnabledReminders();
+    } catch (error) {
+      console.warn('Error initializing notifications permission:', error);
     }
-    if (finalStatus !== 'granted') {
-      console.warn('Failed to get push token for push notification!');
-      return;
-    }
-    await this.scheduleAllEnabledReminders();
   }
 
   async getReminders(): Promise<Reminder[]> {

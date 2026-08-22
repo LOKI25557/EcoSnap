@@ -9,8 +9,13 @@ export const authService = {
     if (!email || !password) {
       throw new Error('Email and password are required.');
     }
+    const cleanEmail = email.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      throw new Error('Invalid email address format.');
+    }
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, cleanEmail, password);
       return userCredential.user;
     } catch (error) {
       throw mapAuthError(error);
@@ -20,16 +25,28 @@ export const authService = {
     if (!email || !password || !name) {
       throw new Error('Email, password, and name are required.');
     }
+    const cleanName = name.trim();
+    if (!cleanName) {
+      throw new Error('Name cannot be empty.');
+    }
+    const cleanEmail = email.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      throw new Error('Invalid email address format.');
+    }
+    if (password.length < 6) {
+      throw new Error('Password must be at least 6 characters.');
+    }
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, password);
       const user = userCredential.user;
       
-      await updateProfile(user, { displayName: name });
+      await updateProfile(user, { displayName: cleanName });
       
       // Create user profile in Firestore
       await firestoreService.createUserProfile(user.uid, {
-        email: user.email || email,
-        displayName: name,
+        email: user.email || cleanEmail,
+        displayName: cleanName,
       });
       
       return user;
@@ -54,8 +71,13 @@ export const authService = {
     if (!email) {
       throw new Error('Email is required.');
     }
+    const cleanEmail = email.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      throw new Error('Invalid email address format.');
+    }
     try {
-      await sendPasswordResetEmail(auth, email);
+      await sendPasswordResetEmail(auth, cleanEmail);
     } catch (error) {
       throw mapAuthError(error);
     }

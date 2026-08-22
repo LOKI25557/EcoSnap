@@ -4,8 +4,12 @@ node_modules/
 
 # env files
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+
+# firebase & credentials
+service-account*.json
+firebase-adminsdk*.json
 
 # build files
 build/

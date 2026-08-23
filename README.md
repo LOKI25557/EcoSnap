@@ -27,7 +27,7 @@ EcoSnap stores user data strictly on the device to maximize user privacy.
 ## Permissions
 - **Camera:** Required for scanning waste. If denied, users cannot utilize the core AI scanner.
 - **Location:** Required to calculate distances to recycling centers. If denied, the app falls back to an offline/manual maps mode.
-- **Notifications:** Used for eco-reminders. If denied, push notifications will gracefully fail.
+- **Notifications:** Used for eco-reminders. If denied, push notifications gracefully fail.
 
 ## Setup & Development Commands
 1. Clone the repository

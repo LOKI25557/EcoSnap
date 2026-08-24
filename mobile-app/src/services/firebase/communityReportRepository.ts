@@ -74,6 +74,7 @@ export const validateCommunityReport = (
     }
   }
 
+  // Map Integration: Validate coordinate bounds for precise rendering on MapScreen
   const hasLat = input.latitude !== undefined && input.latitude !== null;
   const hasLng = input.longitude !== undefined && input.longitude !== null;
 

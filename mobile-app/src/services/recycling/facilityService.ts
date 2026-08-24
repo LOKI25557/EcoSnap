@@ -401,7 +401,7 @@ class FacilityServiceImpl {
       throw new Error('Invalid radius: must be between 1 and 100000 meters');
     }
 
-    // Coordinate validation
+    // Maps Integration: Validate coordinates using mapsService before calling provider
     if (!mapsService.validateCoordinates({ latitude, longitude })) {
       throw new Error('Invalid coordinates for facility search');
     }

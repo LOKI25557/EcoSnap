@@ -132,6 +132,7 @@ export const pickupRepository = {
 
       await setDoc(docRef, newRequest);
       
+      // E2E Notification wiring: Triggers a notification event for pickup creation
       try {
         await notificationEventService.triggerPickupEvent(input.userId, 'pickup_created', docRef.id);
       } catch (notifErr) {

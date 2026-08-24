@@ -32,7 +32,7 @@ export const reviewRepository = {
 
     const userId = currentUser.uid;
 
-    // 2. Validate input
+    // 2. Validate input (rating must be 1-5, comment length must be respected)
     validateReview(input, false);
 
     try {

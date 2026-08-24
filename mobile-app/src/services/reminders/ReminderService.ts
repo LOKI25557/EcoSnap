@@ -36,6 +36,7 @@ class ReminderService {
         finalStatus = status;
       }
       if (finalStatus !== 'granted') {
+        // Notification permission denied: handle gracefully, application functionality continues
         console.warn('Failed to get permissions for push notification!');
         return;
       }

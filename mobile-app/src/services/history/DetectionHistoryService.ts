@@ -2,6 +2,9 @@ import * as FileSystem from 'expo-file-system';
 import { DetectionResponse } from '../../types/DetectionResult';
 import { WasteCategory } from '../../constants/wasteCategories';
 import { safeFileSystemRead } from '../../utils/safeStorage';
+import { authService } from '../firebase/authService';
+import { wasteRepository } from '../firebase/wasteRepository';
+import { recyclingKnowledgeBase } from '../../utils/recyclingKnowledgeBase';
 const HISTORY_FILE_PATH = FileSystem.documentDirectory + 'detection_history.json';
 
 export interface HistoryItem {
@@ -50,6 +53,31 @@ class DetectionHistoryService {
       
       await FileSystem.writeAsStringAsync(HISTORY_FILE_PATH, JSON.stringify(updatedHistory));
       this.historyCache = updatedHistory;
+
+      // Firestore sync if authenticated
+      const currentUser = authService.getCurrentUser();
+      if (currentUser) {
+        try {
+          const knowledge = recyclingKnowledgeBase.getKnowledge(response.result.primaryCategory);
+          const fileName = imageUri ? imageUri.split('/').pop() || '' : '';
+          
+          await wasteRepository.create({
+            userId: currentUser.uid,
+            category: response.result.primaryCategory,
+            confidence: response.result.confidence,
+            binRecommendation: knowledge.disposalMethod || 'General Recyclable',
+            disposalInstructions: knowledge.recyclingInstructions && knowledge.recyclingInstructions.length > 0
+              ? knowledge.recyclingInstructions.join('\n')
+              : 'Please prepare and recycle this item.',
+            imagePath: fileName ? `users/${currentUser.uid}/waste/${fileName}` : '',
+            imageUrl: imageUri || '',
+            detectedAt: new Date(response.metadata.timestamp || Date.now())
+          });
+        } catch (firestoreError) {
+          console.error('Failed to save waste record to Firestore', firestoreError);
+          // Graceful degradation: do not fail local save if Firestore write fails
+        }
+      }
     } catch (error) {
       console.error('Failed to save detection to history', error);
     }

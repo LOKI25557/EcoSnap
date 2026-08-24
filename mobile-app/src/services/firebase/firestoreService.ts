@@ -26,6 +26,10 @@ import { Notification } from '../../types/Notification';
 import { notificationRepository } from './notificationRepository';
 import { authService } from './authService';
 import { facilityRepository } from './facilityRepository';
+import { wasteRepository } from './wasteRepository';
+import { pickupRepository } from './pickupRepository';
+import { communityReportRepository } from './communityReportRepository';
+import { reviewRepository } from './reviewRepository';
 
 export const COLLECTIONS = {
   USERS: 'users',
@@ -204,33 +208,14 @@ export const firestoreService = {
   },
 
   // Waste Record Repository
-  createWasteRecord: async (record: Omit<WasteRecord, 'id' | 'createdAt'>): Promise<string> => {
-    try {
-      const newRecord = {
-        ...record,
-        createdAt: serverTimestamp(),
-      };
-      return await firestoreService.addDocument(COLLECTIONS.WASTE_RECORDS, newRecord);
-    } catch (error) {
-      console.error('Error creating waste record:', error);
-      throw error;
-    }
+  createWasteRecord: async (record: Omit<WasteRecord, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
+    return await wasteRepository.create(record);
   },
 
   getWasteRecord: async (id: string): Promise<WasteRecord | null> => {
-    try {
-      const data = await firestoreService.getDocument<any>(COLLECTIONS.WASTE_RECORDS, id);
-      if (!data) return null;
-      return {
-        id,
-        ...data,
-        detectedAt: data.detectedAt?.toDate ? data.detectedAt.toDate() : new Date(data.detectedAt || Date.now()),
-        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
-      } as WasteRecord;
-    } catch (error) {
-      console.error(`Error getting waste record ${id}:`, error);
-      throw error;
-    }
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) throw new Error('Unauthenticated: User must be logged in');
+    return await wasteRepository.get(currentUser.uid, id);
   },
 
   getUserWasteRecords: async (
@@ -238,81 +223,34 @@ export const firestoreService = {
     limitVal?: number,
     startAfterDoc?: any
   ): Promise<{ items: WasteRecord[]; lastVisible: any | null }> => {
-    try {
-      const constraints: QueryConstraint[] = [
-        where('userId', '==', userId),
-        orderBy('createdAt', 'desc')
-      ];
-
-      if (limitVal) {
-        constraints.push(limit(limitVal));
-      }
-      if (startAfterDoc) {
-        constraints.push(startAfter(startAfterDoc));
-      }
-
-      const result = await firestoreService.queryDocuments<any>(COLLECTIONS.WASTE_RECORDS, constraints);
-      const items = result.items.map((data) => ({
-        ...data,
-        detectedAt: data.detectedAt?.toDate ? data.detectedAt.toDate() : new Date(data.detectedAt || Date.now()),
-        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
-      })) as WasteRecord[];
-
-      return { items, lastVisible: result.lastVisible };
-    } catch (error) {
-      console.error(`Error getting waste records for user ${userId}:`, error);
-      throw error;
-    }
+    return await wasteRepository.list({
+      userId,
+      limit: limitVal,
+      cursor: startAfterDoc,
+    });
   },
 
   updateWasteRecord: async (id: string, recordData: Partial<WasteRecord>): Promise<void> => {
-    try {
-      await firestoreService.updateDocument(COLLECTIONS.WASTE_RECORDS, id, recordData);
-    } catch (error) {
-      console.error(`Error updating waste record ${id}:`, error);
-      throw error;
-    }
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) throw new Error('Unauthenticated: User must be logged in');
+    return await wasteRepository.update(currentUser.uid, id, recordData);
   },
 
   deleteWasteRecord: async (id: string): Promise<void> => {
-    try {
-      await firestoreService.deleteDocument(COLLECTIONS.WASTE_RECORDS, id);
-    } catch (error) {
-      console.error(`Error deleting waste record ${id}:`, error);
-      throw error;
-    }
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) throw new Error('Unauthenticated: User must be logged in');
+    return await wasteRepository.delete(currentUser.uid, id);
   },
 
   // Pickup Request Repository
   createPickupRequest: async (request: Omit<PickupRequest, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
-    try {
-      const newRequest = {
-        ...request,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      };
-      return await firestoreService.addDocument(COLLECTIONS.PICKUP_REQUESTS, newRequest);
-    } catch (error) {
-      console.error('Error creating pickup request:', error);
-      throw error;
-    }
+    return await pickupRepository.create(request as any);
   },
 
   getPickupRequest: async (id: string): Promise<PickupRequest | null> => {
-    try {
-      const data = await firestoreService.getDocument<any>(COLLECTIONS.PICKUP_REQUESTS, id);
-      if (!data) return null;
-      return {
-        id,
-        ...data,
-        scheduledDate: data.scheduledDate?.toDate ? data.scheduledDate.toDate() : new Date(data.scheduledDate || Date.now()),
-        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
-        updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt || Date.now()),
-      } as PickupRequest;
-    } catch (error) {
-      console.error(`Error getting pickup request ${id}:`, error);
-      throw error;
-    }
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) throw new Error('Unauthenticated: User must be logged in');
+    return await pickupRepository.get(currentUser.uid, id);
   },
 
   getUserPickupRequests: async (
@@ -320,76 +258,33 @@ export const firestoreService = {
     limitVal?: number,
     startAfterDoc?: any
   ): Promise<{ items: PickupRequest[]; lastVisible: any | null }> => {
-    try {
-      const constraints: QueryConstraint[] = [
-        where('userId', '==', userId),
-        orderBy('createdAt', 'desc')
-      ];
-
-      if (limitVal) {
-        constraints.push(limit(limitVal));
-      }
-      if (startAfterDoc) {
-        constraints.push(startAfter(startAfterDoc));
-      }
-
-      const result = await firestoreService.queryDocuments<any>(COLLECTIONS.PICKUP_REQUESTS, constraints);
-      const items = result.items.map((data) => ({
-        ...data,
-        scheduledDate: data.scheduledDate?.toDate ? data.scheduledDate.toDate() : new Date(data.scheduledDate || Date.now()),
-        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
-        updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt || Date.now()),
-      })) as PickupRequest[];
-
-      return { items, lastVisible: result.lastVisible };
-    } catch (error) {
-      console.error(`Error getting pickup requests for user ${userId}:`, error);
-      throw error;
-    }
+    return await pickupRepository.list({
+      userId,
+      limit: limitVal,
+      cursor: startAfterDoc,
+    });
   },
 
   updatePickupRequest: async (id: string, requestData: Partial<PickupRequest>): Promise<void> => {
-    try {
-      const updates = {
-        ...requestData,
-        updatedAt: serverTimestamp(),
-      };
-      await firestoreService.updateDocument(COLLECTIONS.PICKUP_REQUESTS, id, updates);
-    } catch (error) {
-      console.error(`Error updating pickup request ${id}:`, error);
-      throw error;
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) throw new Error('Unauthenticated: User must be logged in');
+    if (requestData.status) {
+      await pickupRepository.updateStatus(currentUser.uid, id, requestData.status, false);
+    } else {
+      const docRef = doc(db, COLLECTIONS.USERS, currentUser.uid, COLLECTIONS.PICKUP_REQUESTS, id);
+      await updateDoc(docRef, requestData as any);
     }
   },
 
   // Community Report Repository
   createCommunityReport: async (report: Omit<CommunityReport, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
-    try {
-      const newReport = {
-        ...report,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      };
-      return await firestoreService.addDocument(COLLECTIONS.COMMUNITY_REPORTS, newReport);
-    } catch (error) {
-      console.error('Error creating community report:', error);
-      throw error;
-    }
+    return await communityReportRepository.create(report as any);
   },
 
   getCommunityReport: async (id: string): Promise<CommunityReport | null> => {
-    try {
-      const data = await firestoreService.getDocument<any>(COLLECTIONS.COMMUNITY_REPORTS, id);
-      if (!data) return null;
-      return {
-        id,
-        ...data,
-        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
-        updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt || Date.now()),
-      } as CommunityReport;
-    } catch (error) {
-      console.error(`Error getting community report ${id}:`, error);
-      throw error;
-    }
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) throw new Error('Unauthenticated: User must be logged in');
+    return await communityReportRepository.get(currentUser.uid, id);
   },
 
   getCommunityReports: async (
@@ -397,46 +292,24 @@ export const firestoreService = {
     limitVal?: number,
     startAfterDoc?: any
   ): Promise<{ items: CommunityReport[]; lastVisible: any | null }> => {
-    try {
-      const constraints: QueryConstraint[] = [];
-      
-      if (status) {
-        constraints.push(where('status', '==', status));
-      }
-      
-      constraints.push(orderBy('createdAt', 'desc'));
-
-      if (limitVal) {
-        constraints.push(limit(limitVal));
-      }
-      if (startAfterDoc) {
-        constraints.push(startAfter(startAfterDoc));
-      }
-
-      const result = await firestoreService.queryDocuments<any>(COLLECTIONS.COMMUNITY_REPORTS, constraints);
-      const items = result.items.map((data) => ({
-        ...data,
-        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
-        updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt || Date.now()),
-      })) as CommunityReport[];
-
-      return { items, lastVisible: result.lastVisible };
-    } catch (error) {
-      console.error('Error getting community reports:', error);
-      throw error;
-    }
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) throw new Error('Unauthenticated: User must be logged in');
+    return await communityReportRepository.list({
+      userId: currentUser.uid,
+      status: status as any,
+      limit: limitVal,
+      cursor: startAfterDoc,
+    });
   },
 
   updateCommunityReport: async (id: string, reportData: Partial<CommunityReport>): Promise<void> => {
-    try {
-      const updates = {
-        ...reportData,
-        updatedAt: serverTimestamp(),
-      };
-      await firestoreService.updateDocument(COLLECTIONS.COMMUNITY_REPORTS, id, updates);
-    } catch (error) {
-      console.error(`Error updating community report ${id}:`, error);
-      throw error;
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) throw new Error('Unauthenticated: User must be logged in');
+    if (reportData.status) {
+      await communityReportRepository.updateStatus(currentUser.uid, id, reportData.status, false);
+    } else {
+      const docRef = doc(db, COLLECTIONS.USERS, currentUser.uid, COLLECTIONS.COMMUNITY_REPORTS, id);
+      await updateDoc(docRef, reportData as any);
     }
   },
 
@@ -460,36 +333,17 @@ export const firestoreService = {
 
   // Reviews Repository
   createReview: async (review: Omit<Review, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
-    try {
-      if (review.rating < 1 || review.rating > 5) {
-        throw new Error('Rating must be between 1 and 5');
-      }
-      const newReview = {
-        ...review,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      };
-      return await firestoreService.addDocument(COLLECTIONS.REVIEWS, newReview);
-    } catch (error) {
-      console.error('Error creating review:', error);
-      throw error;
-    }
+    return await reviewRepository.create({
+      facilityId: review.facilityId,
+      rating: review.rating,
+      comment: review.comment,
+    });
   },
 
   getReview: async (id: string): Promise<Review | null> => {
-    try {
-      const data = await firestoreService.getDocument<any>(COLLECTIONS.REVIEWS, id);
-      if (!data) return null;
-      return {
-        id,
-        ...data,
-        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
-        updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt || Date.now()),
-      } as Review;
-    } catch (error) {
-      console.error(`Error getting review ${id}:`, error);
-      throw error;
-    }
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) throw new Error('Unauthenticated: User must be logged in');
+    throw new Error('Not implemented: Facility ID required to fetch specific review');
   },
 
   getFacilityReviews: async (
@@ -497,56 +351,24 @@ export const firestoreService = {
     limitVal?: number,
     startAfterDoc?: any
   ): Promise<{ items: Review[]; lastVisible: any | null }> => {
-    try {
-      const constraints: QueryConstraint[] = [
-        where('facilityId', '==', facilityId),
-        orderBy('createdAt', 'desc')
-      ];
-
-      if (limitVal) {
-        constraints.push(limit(limitVal));
-      }
-      if (startAfterDoc) {
-        constraints.push(startAfter(startAfterDoc));
-      }
-
-      const result = await firestoreService.queryDocuments<any>(COLLECTIONS.REVIEWS, constraints);
-      const items = result.items.map((data) => ({
-        ...data,
-        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
-        updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt || Date.now()),
-      })) as Review[];
-
-      return { items, lastVisible: result.lastVisible };
-    } catch (error) {
-      console.error(`Error getting reviews for facility ${facilityId}:`, error);
-      throw error;
-    }
+    return await reviewRepository.getFacilityReviews(facilityId, {
+      limit: limitVal,
+      cursor: startAfterDoc,
+    });
   },
 
   updateReview: async (id: string, reviewData: Partial<Review>): Promise<void> => {
-    try {
-      if (reviewData.rating !== undefined && (reviewData.rating < 1 || reviewData.rating > 5)) {
-        throw new Error('Rating must be between 1 and 5');
-      }
-      const updates = {
-        ...reviewData,
-        updatedAt: serverTimestamp(),
-      };
-      await firestoreService.updateDocument(COLLECTIONS.REVIEWS, id, updates);
-    } catch (error) {
-      console.error(`Error updating review ${id}:`, error);
-      throw error;
-    }
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) throw new Error('Unauthenticated: User must be logged in');
+    if (!reviewData.facilityId) throw new Error('Facility ID is required to update a review');
+    return await reviewRepository.update(reviewData.facilityId, id, {
+      rating: reviewData.rating,
+      comment: reviewData.comment,
+    });
   },
 
   deleteReview: async (id: string): Promise<void> => {
-    try {
-      await firestoreService.deleteDocument(COLLECTIONS.REVIEWS, id);
-    } catch (error) {
-      console.error(`Error deleting review ${id}:`, error);
-      throw error;
-    }
+    throw new Error('Not implemented: Facility ID required to delete review');
   },
 
   // Notification Repository delegates

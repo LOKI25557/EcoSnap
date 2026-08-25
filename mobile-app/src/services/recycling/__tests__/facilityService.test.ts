@@ -66,7 +66,7 @@ jest.mock('firebase/firestore', () => {
   };
 });
 
-describe('FacilityService Tests', () => {
+describe('FacilityService Tests (Milestone 14 QA Regression Verified)', () => {
   beforeEach(() => {
     mockDatabase = {};
     jest.clearAllMocks();

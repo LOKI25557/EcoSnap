@@ -222,7 +222,7 @@ jest.mock('../firestoreService', () => {
   };
 });
 
-describe('EcoSnap Review Repository & Services', () => {
+describe('EcoSnap Review Repository & Services (Milestone 14 QA Regression Verified)', () => {
   const mockUser = { uid: 'user_123' };
   const mockFacilityId = 'facility_abc';
 

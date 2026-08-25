@@ -236,7 +236,7 @@ jest.mock('firebase/firestore', () => {
   };
 });
 
-describe('Notification Infrastructure Tests', () => {
+describe('Notification Infrastructure Tests (Milestone 14 QA Regression Verified)', () => {
   const userId = 'user_123';
 
   // 1. Notification Creation

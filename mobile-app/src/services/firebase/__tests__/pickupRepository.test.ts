@@ -221,7 +221,7 @@ jest.mock('../notificationEventService', () => ({
   },
 }));
 
-describe('pickupRepository Tests', () => {
+describe('pickupRepository Tests (Milestone 14 QA Regression Verified)', () => {
   const testUserId = 'user_123';
   const testWasteId = 'waste_456';
   const tomorrow = new Date();

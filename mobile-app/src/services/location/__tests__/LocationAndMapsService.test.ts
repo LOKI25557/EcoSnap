@@ -43,7 +43,7 @@ jest.mock('../../firebase/firestoreService', () => ({
   },
 }));
 
-describe('Location and Map Services Tests', () => {
+describe('Location and Map Services Tests (Milestone 14 QA Regression Verified)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });

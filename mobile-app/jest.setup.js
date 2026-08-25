@@ -1,3 +1,12 @@
+// Mock environment variables for Firebase configuration
+process.env.EXPO_PUBLIC_FIREBASE_API_KEY = 'mock-api-key';
+process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN = 'mock-auth-domain';
+process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID = 'mock-project-id';
+process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET = 'mock-storage-bucket';
+process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID = 'mock-sender-id';
+process.env.EXPO_PUBLIC_FIREBASE_APP_ID = 'mock-app-id';
+process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY = 'mock-maps-api-key';
+
 // Mock AsyncStorage
 import mockAsyncStorage from '@react-native-async-storage/async-storage/jest/async-storage-mock';
 jest.mock('@react-native-async-storage/async-storage', () => mockAsyncStorage);

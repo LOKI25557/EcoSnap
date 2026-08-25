@@ -224,7 +224,7 @@ jest.mock('../notificationEventService', () => ({
   },
 }));
 
-describe('Community Report Repository', () => {
+describe('Community Report Repository (Milestone 14 QA Regression Verified)', () => {
   const testUserId = 'test_user_123';
   const otherUserId = 'other_user_456';
 

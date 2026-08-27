@@ -38,7 +38,7 @@ EcoSnap stores user data strictly on the device to maximize user privacy.
 ## Validation Commands
 - Type-checking: `npm run ts:check`
 - Testing: `npm run test`
-- Expo Validation: `npx expo-doctor`
+- Expo `npx expo-doctor`
 
 ## Production Status
 - **Validation State:** Static TypeScript validation passes, automated Jest tests pass, and Expo Doctor passes.

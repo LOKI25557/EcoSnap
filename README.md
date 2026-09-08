@@ -43,7 +43,7 @@ EcoSnap stores user data strictly on the device to maximize user privacy.
 ## Production Status
 - **Validation State:** Static TypeScript validation passes, automated Jest tests pass, and Expo Doctor passes.
 - **Deployment:** Production EAS configuration exists.
-- **Physical Device Validation:** The latest validation pass utilized static code analysis and automated tools in a local environment. Comprehensive physical device testing and end-to-end final production EAS build validation may still be required prior to final store deployment.
+- **Physical Device Validation:** The latest validation pass utilized static code analysis and automated tools in a local environment. Comprehensive physical device testing and end-to-end final production EAS build validation may still be required prior to deployment.
 
 ## Branch Strategy
 - `main` - Production ready code

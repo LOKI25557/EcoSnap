@@ -22,7 +22,7 @@ EcoSnap stores user data strictly on the device to maximize user privacy.
 - **Where it is stored:** Data is stored locally via `AsyncStorage` and Expo's `FileSystem`.
 - **Data retention:** Data remains indefinitely until explicitly cleared by the user.
 - **Data leaving the device:** User data never leaves the device automatically. Users may manually trigger backups or JSON exports using the native system sharing sheet.
-- **User Control:** Users can clear all history, wipe profile data, and reset statistics directly from the settings page.
+- **User Control:** Users can clear all history, and reset statistics directly from the settings page.
 
 ## Permissions
 - **Camera:** Required for scanning waste. If denied, users cannot utilize the core AI scanner.

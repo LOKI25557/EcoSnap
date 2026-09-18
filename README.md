@@ -17,7 +17,7 @@ The application leverages an offline-first architecture with React Native and Ex
 The AI Pipeline utilizes `react-native-fast-tflite` for loading `mobilenet_v1_1.0_224_quant.tflite` natively on the device, ensuring high-performance image inference without requiring external API calls.
 
 ## Privacy & Data Storage
-EcoSnap stores user data strictly on the device to maximize user privacy.
+EcoSnap stores user data strictly on the device to maximize privacy.
 - **What is stored:** Detection history, profile configurations, sustainability statistics, completed achievements, current goals, and points.
 - **Where it is stored:** Data is stored locally via `AsyncStorage` and Expo's `FileSystem`.
 - **Data retention:** Data remains indefinitely until explicitly cleared by the user.

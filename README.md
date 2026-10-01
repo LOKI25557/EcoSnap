@@ -14,7 +14,7 @@ EcoSnap is an AI-powered smart waste management and recycling assistant that hel
 
 ## Architecture & AI Pipeline
 The application leverages an offline-first architecture with React Native and Expo (SDK 51). 
-The AI Pipeline utilizes `react-native-fast-tflite` for loading `mobilenet_v1_1.0_224_quant.tflite` natively on the device, ensuring high-performance image inference without requiring external API calls.
+The AI Pipeline utilizes `react-native-fast-tflite` for loading `mobilenet_v1_1.0_224_quant.tflite` natively on the device, ensuring high-performance image inference without external API calls.
 
 ## Privacy & Data Storage
 EcoSnap stores user data strictly on the device to maximize privacy.

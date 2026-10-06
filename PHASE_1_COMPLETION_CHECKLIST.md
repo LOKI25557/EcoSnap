@@ -64,7 +64,7 @@ All 12 requirements for Phase 1 AI module have been successfully implemented, va
 - **Architecture:**
   - Stage 1: 20 epochs (backbone frozen)
   - Stage 2: 10 epochs (top 100 layers unfrozen)
-  - Adam optimizer with adaptive learning rate
+  -
 
 #### ✅ 3. Model Evaluation Module
 - **File:** `ai-engine/evaluation/evaluate_waste_classifier.py` (380 lines)

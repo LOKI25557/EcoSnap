@@ -10,7 +10,7 @@ EcoSnap is an AI-powered smart waste management and recycling assistant that hel
 - **Smart Assistant:** Personalized AI recycling guidance, disposal steps, and environmental impact insights.
 - **Sustainability Dashboard:** Track your eco points, goals, achievements, and complete weekly challenges.
 - **Offline-First Architecture:** Core functionality remains fully operational without internet access. Data is stored safely on the device.
-- **Maps & Recycling Centers:** Interactive map functionality to locate nearby recycling facilities.
+- **Maps & Recycling Centers:** Interactive map functionality to locate nearby recycling .
 
 ## Architecture & AI Pipeline
 The application leverages an offline-first architecture with React Native and Expo (SDK 51). 

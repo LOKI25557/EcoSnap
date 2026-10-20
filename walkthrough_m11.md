@@ -41,7 +41,6 @@ graph TD
 - **Inference failure:** Handled in `pipelineService` and caught by `CameraScreen` showing a descriptive alert.
 - **Unknown/Low Confidence:** The `DetectionService` already defines a 0.3 threshold. If below this, it overrides the category to `UNKNOWN` properly.
 - **Storage failure:** Safely caught within `DetectionHistoryService` wrapping Expo `FileSystem` operations.
-- **Offline operation:** 100% functional; all inference and history mapping happens fully offline.
 
 ## 8. QR/Barcode Status
 **Implemented** - Cleanly added using the existing `expo-camera` component (`barcodeScannerSettings` and `onBarcodeScanned` prop) without altering the waste analysis flow.

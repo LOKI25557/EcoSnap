@@ -1,0 +1,97 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Users collection: Allow read/write for owner, protect privileged fields like score and joinedDate
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.score == 0;
+      allow update: if isOwner(userId)
+                    && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['score', 'createdAt', 'joinedDate']));
+
+      // wasteRecords collection: Scoped to owner, prevent changing metadata fields on update
+      match /wasteRecords/{recordId} {
+        allow read, delete: if isOwner(userId);
+        allow create: if isOwner(userId);
+        allow update: if isOwner(userId) && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['userId', 'createdAt']));
+      }
+
+      // pickupRequests collection: Scoped to owner, status changes must follow lifecycle rules
+      match /pickupRequests/{requestId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.status == 'pending';
+        allow update: if isOwner(userId) &&
+                      (request.resource.data.status == resource.data.status ||
+                       (resource.data.status in ['pending', 'scheduled'] && request.resource.data.status == 'cancelled'))
+                      && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['userId', 'createdAt', 'wasteRecordId', 'wasteCategory']));
+      }
+
+      // communityReports collection: Scoped to owner, status and metadata are immutable for clients
+      match /communityReports/{reportId} {
+        allow read, delete: if isOwner(userId);
+        allow create: if isOwner(userId)
+                      && request.resource.data.status == 'pending'
+                      && request.resource.data.userId == userId;
+        allow update: if isOwner(userId)
+                      && request.resource.data.status == resource.data.status
+                      && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['status', 'resolvedAt', 'rejectedAt', 'userId', 'createdAt']));
+      }
+
+      // notifications subcollection: Scoped to owner, notification parameters are immutable on update
+      match /notifications/{notificationId} {
+        allow read, delete: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.userId == userId;
+        allow update: if isOwner(userId) &&
+                      (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['userId', 'type', 'title', 'body', 'message', 'createdAt', 'data', 'expiresAt', 'imageUrl', 'actionUrl']));
+      }
+
+      // notificationPreferences subcollection: Scoped to owner
+      match /notificationPreferences/{settingsDoc} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // devices subcollection: Scoped to owner
+      match /devices/{deviceId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // facilities collection: Publicly readable for authenticated users, writable only by admin
+    match /facilities/{facilityId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Only manageable via admin dashboard or cloud functions
+
+      // reviews collection: Scoped reviews nested inside facilities, 1 review per user, rating restricted to 1-5
+      match /reviews/{reviewId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated()
+                      && request.resource.data.userId == request.auth.uid
+                      && request.resource.data.facilityId == facilityId
+                      && request.resource.data.rating >= 1
+                      && request.resource.data.rating <= 5;
+        allow update: if isAuthenticated()
+                      && resource.data.userId == request.auth.uid
+                      && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['userId', 'facilityId', 'createdAt']))
+                      && request.resource.data.rating >= 1
+                      && request.resource.data.rating <= 5;
+        allow delete: if isAuthenticated()
+                      && resource.data.userId == request.auth.uid;
+      }
+    }
+
+    // Explicitly block legacy/top-level access to collections that should only exist as user-scoped subcollections
+    match /wasteRecords/{id} { allow read, write: if false; }
+    match /pickupRequests/{id} { allow read, write: if false; }
+    match /communityReports/{id} { allow read, write: if false; }
+    match /reviews/{id} { allow read, write: if false; }
+    match /notifications/{id} { allow read, write: if false; }
+  }
+}

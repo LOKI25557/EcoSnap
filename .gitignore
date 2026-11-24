@@ -13,6 +13,10 @@
 !.env.example
 !.env.*.example
 
+# Firebase credentials
+service-account*.json
+firebase-adminsdk*.json
+
 # Build outputs
 **/build/
 **/dist/

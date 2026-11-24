@@ -48,6 +48,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               score: 0,
               createdAt: new Date(),
               updatedAt: new Date(),
+              name: firebaseUser.displayName || 'Eco Warrior',
+              avatar: firebaseUser.photoURL || '',
+              preferredLanguage: 'en',
+              themePreference: 'system',
+              notificationPreferences: {
+                dailyReminders: true,
+                streakAlerts: true,
+                challenges: true,
+                quietHoursStart: '22:00',
+                quietHoursEnd: '08:00',
+              },
+              favoriteCategories: [],
+              dailyGoal: 5,
+              weeklyGoal: 30,
+              monthlyGoal: 120,
+              joinedDate: Date.now(),
+              totalAchievements: 0,
             };
           }
           setUser(profile);

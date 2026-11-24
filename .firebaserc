@@ -1,0 +1,6 @@
+{
+  "projects": {
+    "default": "ecosnap-dev",
+    "production": "ecosnap-production"
+  }
+}

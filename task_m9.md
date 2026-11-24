@@ -17,5 +17,5 @@
 - [x] Phase 15: Real Device / Emulator Validation
 - [x] Phase 16: Build Validation
 - [x] Phase 17: Dependency Audit
-- [x] Phase 18: Git & Release Hygiene
-- [x] Phase 19: Documentation (Write walkthrough and update README)
+
+- [x] Phase 18: Documentation (Write walkthrough and update README)

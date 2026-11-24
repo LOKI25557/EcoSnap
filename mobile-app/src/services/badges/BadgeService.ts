@@ -23,6 +23,10 @@ const DEFAULT_BADGES: Badge[] = [
 class BadgeService {
   private cache: Badge[] | null = null;
 
+  resetCache(): void {
+    this.cache = null;
+  }
+
   async getBadges(): Promise<Badge[]> {
     if (this.cache) return this.cache;
     try {

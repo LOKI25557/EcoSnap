@@ -11,7 +11,7 @@
     "test": "jest"
   },
   "dependencies": {
-    "@react-native-async-storage/async-storage": "1.23.1",
+    "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-navigation/bottom-tabs": "^6.5.11",
     "@react-navigation/native": "^6.1.9",
     "@react-navigation/native-stack": "^6.9.17",
@@ -42,6 +42,13 @@
     "jest-expo": "~51.0.4",
     "ts-jest": "^29.4.12",
     "typescript": "~5.3.3"
+  },
+  "expo": {
+    "install": {
+      "exclude": [
+        "@react-native-async-storage/async-storage"
+      ]
+    }
   },
   "private": true
 }

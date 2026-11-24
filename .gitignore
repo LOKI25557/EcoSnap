@@ -1,27 +1,86 @@
-# dependencies
-node_modules/
-.expo/
 
-# env files
+# ==========================================
+# ECOSNAP ROOT GITIGNORE
+# ==========================================
+
+# Dependencies
+**/node_modules/
+**/.expo/
+
+# Environment variables and secrets
 .env
 .env.*
 !.env.example
+!.env.*.example
 
-# firebase & credentials
+# Firebase credentials
 service-account*.json
 firebase-adminsdk*.json
 
-# build files
-build/
-dist/
+# Build outputs
+**/build/
+**/dist/
+**/coverage/
+**/.expo-shared/
+
+# Android and iOS build artifacts
+/mobile-app/android/.gradle/
 /mobile-app/android/app/build/
+/mobile-app/android/build/
 /mobile-app/ios/build/
+**/Pods/
 
-# generated model files
-ai-engine/models/*.tflite
-ai-engine/models/*.pb
-ai-engine/models/*.h5
+# EAS
+.eas/
 
-# OS generated files
+# AI training model binaries
+/ai-engine/models/*.keras
+/ai-engine/models/*.tflite
+/ai-engine/models/*.pb
+/ai-engine/models/*.onnx
+
+# AI datasets
+/ai-engine/datasets/raw/
+/ai-engine/datasets/prepared/
+/ai-engine/datasets/processed/
+/ai-engine/datasets/splits/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Test and coverage artifacts
+coverage.xml
+htmlcov/
+.nyc_output/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# IDE
+.idea/
+.vscode/
+
+# OS
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.bak
+
+# Local duplicate model artifacts
+/models/

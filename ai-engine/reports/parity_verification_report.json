@@ -1,0 +1,175 @@
+{
+  "timestamp": "2026-11-24 21:50:50",
+  "keras_model_path": "C:\\Users\\Lokesh\\OneDrive\\Desktop\\Projects\\EcoSnap\\ai-engine\\models\\waste_classifier.keras",
+  "tflite_model_path": "C:\\Users\\Lokesh\\OneDrive\\Desktop\\Projects\\EcoSnap\\mobile-app\\assets\\models\\waste_classifier.tflite",
+  "total_samples": 16,
+  "agreement_count": 16,
+  "agreement_rate": 1.0,
+  "max_prob_diff": 0.1269932985305786,
+  "avg_keras_latency_ms": 384.9146937500336,
+  "avg_tflite_latency_ms": 95.18033125641523,
+  "speedup_factor": 4.04,
+  "samples": [
+    {
+      "image": "trashnet_plastic10.jpg",
+      "true_class": "Plastic",
+      "keras_pred": "Glass",
+      "keras_conf": 0.6134374737739563,
+      "tflite_pred": "Glass",
+      "tflite_conf": 0.5949507355690002,
+      "prob_diff": 0.02705015242099762,
+      "matched": true
+    },
+    {
+      "image": "trashnet_plastic104.jpg",
+      "true_class": "Plastic",
+      "keras_pred": "Plastic",
+      "keras_conf": 0.7019743919372559,
+      "tflite_pred": "Plastic",
+      "tflite_conf": 0.7191935777664185,
+      "prob_diff": 0.017219185829162598,
+      "matched": true
+    },
+    {
+      "image": "trashnet_paper110.jpg",
+      "true_class": "Paper",
+      "keras_pred": "E-waste",
+      "keras_conf": 0.760402500629425,
+      "tflite_pred": "E-waste",
+      "tflite_conf": 0.6334092020988464,
+      "prob_diff": 0.1269932985305786,
+      "matched": true
+    },
+    {
+      "image": "trashnet_paper112.jpg",
+      "true_class": "Paper",
+      "keras_pred": "Paper",
+      "keras_conf": 0.9942159056663513,
+      "tflite_pred": "Paper",
+      "tflite_conf": 0.9947823882102966,
+      "prob_diff": 0.0005664825439453125,
+      "matched": true
+    },
+    {
+      "image": "trashnet_glass1.jpg",
+      "true_class": "Glass",
+      "keras_pred": "Glass",
+      "keras_conf": 0.9213900566101074,
+      "tflite_pred": "Glass",
+      "tflite_conf": 0.8997853398323059,
+      "prob_diff": 0.021604716777801514,
+      "matched": true
+    },
+    {
+      "image": "trashnet_glass107.jpg",
+      "true_class": "Glass",
+      "keras_pred": "Glass",
+      "keras_conf": 0.7506707310676575,
+      "tflite_pred": "Glass",
+      "tflite_conf": 0.7662896513938904,
+      "prob_diff": 0.01561892032623291,
+      "matched": true
+    },
+    {
+      "image": "trashnet_metal104.jpg",
+      "true_class": "Metal",
+      "keras_pred": "Metal",
+      "keras_conf": 0.5417129397392273,
+      "tflite_pred": "Metal",
+      "tflite_conf": 0.6122283935546875,
+      "prob_diff": 0.0705154538154602,
+      "matched": true
+    },
+    {
+      "image": "trashnet_metal116.jpg",
+      "true_class": "Metal",
+      "keras_pred": "Metal",
+      "keras_conf": 0.526947021484375,
+      "tflite_pred": "Metal",
+      "tflite_conf": 0.5444403290748596,
+      "prob_diff": 0.0757547914981842,
+      "matched": true
+    },
+    {
+      "image": "trashnet_cardboard112.jpg",
+      "true_class": "Cardboard",
+      "keras_pred": "E-waste",
+      "keras_conf": 0.5408540964126587,
+      "tflite_pred": "E-waste",
+      "tflite_conf": 0.48505425453186035,
+      "prob_diff": 0.05579984188079834,
+      "matched": true
+    },
+    {
+      "image": "trashnet_cardboard115.jpg",
+      "true_class": "Cardboard",
+      "keras_pred": "Cardboard",
+      "keras_conf": 0.9875901937484741,
+      "tflite_pred": "Cardboard",
+      "tflite_conf": 0.9899809956550598,
+      "prob_diff": 0.0023908019065856934,
+      "matched": true
+    },
+    {
+      "image": "organic_100.jpg",
+      "true_class": "Organic",
+      "keras_pred": "Organic",
+      "keras_conf": 0.9984065890312195,
+      "tflite_pred": "Organic",
+      "tflite_conf": 0.9983493089675903,
+      "prob_diff": 0.00014572357758879662,
+      "matched": true
+    },
+    {
+      "image": "organic_115.jpg",
+      "true_class": "Organic",
+      "keras_pred": "Organic",
+      "keras_conf": 0.716795802116394,
+      "tflite_pred": "Organic",
+      "tflite_conf": 0.7916548848152161,
+      "prob_diff": 0.07485908269882202,
+      "matched": true
+    },
+    {
+      "image": "battery_1.jpg",
+      "true_class": "Battery",
+      "keras_pred": "Battery",
+      "keras_conf": 0.7944326400756836,
+      "tflite_pred": "Battery",
+      "tflite_conf": 0.7579551935195923,
+      "prob_diff": 0.03647744655609131,
+      "matched": true
+    },
+    {
+      "image": "battery_101.jpg",
+      "true_class": "Battery",
+      "keras_pred": "Battery",
+      "keras_conf": 0.9823894500732422,
+      "tflite_pred": "Battery",
+      "tflite_conf": 0.9810132384300232,
+      "prob_diff": 0.0015435200184583664,
+      "matched": true
+    },
+    {
+      "image": "ewaste_keyboards_10.jpg",
+      "true_class": "E-waste",
+      "keras_pred": "E-waste",
+      "keras_conf": 0.9911261200904846,
+      "tflite_pred": "E-waste",
+      "tflite_conf": 0.990958571434021,
+      "prob_diff": 0.00036101508885622025,
+      "matched": true
+    },
+    {
+      "image": "ewaste_keyboards_2.jpg",
+      "true_class": "E-waste",
+      "keras_pred": "E-waste",
+      "keras_conf": 0.8570365905761719,
+      "tflite_pred": "E-waste",
+      "tflite_conf": 0.8348835706710815,
+      "prob_diff": 0.022153019905090332,
+      "matched": true
+    }
+  ],
+  "parity_status": "PASSED"
+}

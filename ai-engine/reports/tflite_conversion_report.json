@@ -1,0 +1,62 @@
+{
+  "config": {
+    "keras_model_path": "ai-engine\\models\\waste_classifier.keras",
+    "tflite_output_path": "C:\\Users\\Lokesh\\OneDrive\\Desktop\\Projects\\EcoSnap\\mobile-app\\assets\\models\\waste_classifier.tflite",
+    "labels_path": "C:\\Users\\Lokesh\\OneDrive\\Desktop\\Projects\\EcoSnap\\ai-engine\\models\\waste_classifier_labels.json",
+    "image_size": [
+      224,
+      224
+    ],
+    "num_classes": 8,
+    "class_names": [
+      "Plastic",
+      "Paper",
+      "Glass",
+      "Metal",
+      "Cardboard",
+      "Organic",
+      "Battery",
+      "E-waste"
+    ]
+  },
+  "conversion_status": "success",
+  "model_sizes": {
+    "keras_bytes": 24692218,
+    "tflite_bytes": 2540592
+  },
+  "keras_inference": {
+    "output_shape": [
+      1,
+      8
+    ],
+    "output_dtype": "float32",
+    "output_range": {
+      "min": 0.002055875025689602,
+      "max": 0.5162472128868103
+    },
+    "predicted_class_index": 5,
+    "predicted_confidence": 0.5162472128868103
+  },
+  "tflite_inference": {
+    "output_shape": [
+      1,
+      8
+    ],
+    "output_dtype": "float32",
+    "output_range": {
+      "min": 0.0010186688741669059,
+      "max": 0.5529823303222656
+    },
+    "predicted_class_index": 5,
+    "predicted_confidence": 0.5529823303222656
+  },
+  "comparison": {
+    "class_indices_match": true,
+    "confidence_difference": 0.03673511743545532,
+    "confidence_very_close": false
+  },
+  "verification": {
+    "passed": false,
+    "notes": "TFLite model produces consistent predictions with the original Keras model."
+  }
+}

@@ -22,6 +22,10 @@ export interface GroupedHistory {
 class DetectionHistoryService {
   private historyCache: HistoryItem[] | null = null;
 
+  resetCache(): void {
+    this.historyCache = null;
+  }
+
   /**
    * Get the full detection history
    */

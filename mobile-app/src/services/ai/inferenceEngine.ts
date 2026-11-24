@@ -99,10 +99,21 @@ export const inferenceEngine = {
       // 4. Parse Outputs
       const confidences = new Float32Array(outputs[0] as ArrayBufferLike);
       
+      if (confidences.length !== 8) {
+        throw new InferenceError(
+          `Invalid output tensor length: expected 8 classes, received ${confidences.length}`,
+          'INVALID_OUTPUT_TENSOR'
+        );
+      }
+
       // Build array of all predictions
       const predictions: { classIndex: number; confidence: number }[] = [];
       for (let i = 0; i < confidences.length; i++) {
-        predictions.push({ classIndex: i, confidence: confidences[i] });
+        const val = confidences[i];
+        if (!Number.isFinite(val) || isNaN(val)) {
+          throw new InferenceError('Model output contains non-finite probabilities', 'INVALID_OUTPUT_VALUES');
+        }
+        predictions.push({ classIndex: i, confidence: val });
       }
       
       // Sort by confidence descending

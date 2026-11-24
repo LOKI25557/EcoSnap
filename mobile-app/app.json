@@ -5,6 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "owner": "ecosnap-team",
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -12,15 +13,33 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.ecosnap.app",
       "adaptiveIcon": {
         "backgroundColor": "#ffffff"
-      }
+      },
+      "permissions": [
+        "CAMERA"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-asset"
-    ]
+      "expo-asset",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow EcoSnap to use your camera to identify waste.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      "react-native-fast-tflite"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "5350d4a1-b0dc-418b-b914-309eb47fb335"
+      }
+    }
   }
 }

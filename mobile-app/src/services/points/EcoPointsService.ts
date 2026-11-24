@@ -12,6 +12,10 @@ const DEFAULT_POINTS: EcoPoints = {
 class EcoPointsService {
   private cache: EcoPoints | null = null;
 
+  resetCache(): void {
+    this.cache = null;
+  }
+
   async getPoints(): Promise<EcoPoints> {
     if (this.cache) return this.cache;
     try {

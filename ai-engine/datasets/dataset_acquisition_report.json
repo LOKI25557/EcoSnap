@@ -1,0 +1,128 @@
+{
+  "metadata": {
+    "project": "EcoSnap & Segregate",
+    "milestone": 25,
+    "task": "Real AI Waste Classification Model Training",
+    "classes_count": 8,
+    "classes": [
+      "Plastic",
+      "Paper",
+      "Glass",
+      "Metal",
+      "Cardboard",
+      "Organic",
+      "Battery",
+      "E-waste"
+    ],
+    "sources": [
+      {
+        "name": "TrashNet",
+        "authors": "Gary Thung, Mindy Yang (Stanford CS 229)",
+        "license": "MIT License",
+        "categories_provided": [
+          "Plastic",
+          "Paper",
+          "Glass",
+          "Metal",
+          "Cardboard"
+        ]
+      },
+      {
+        "name": "Waste Garbage Management Dataset",
+        "publisher": "Hugging Face / Roboflow Universe",
+        "license": "CC-BY-4.0",
+        "categories_provided": [
+          "Battery",
+          "Organic"
+        ]
+      },
+      {
+        "name": "EWasteNet Dataset",
+        "publisher": "IEEE ICSECS 2023 / GitHub",
+        "license": "Open Research Dataset",
+        "categories_provided": [
+          "E-waste"
+        ]
+      }
+    ]
+  },
+  "validation": {
+    "classes": {
+      "Plastic": {
+        "valid_count": 250,
+        "min_width": 512,
+        "max_width": 512,
+        "min_height": 384,
+        "max_height": 384,
+        "mean_width": 512.0,
+        "mean_height": 384.0
+      },
+      "Paper": {
+        "valid_count": 250,
+        "min_width": 512,
+        "max_width": 512,
+        "min_height": 384,
+        "max_height": 384,
+        "mean_width": 512.0,
+        "mean_height": 384.0
+      },
+      "Glass": {
+        "valid_count": 250,
+        "min_width": 512,
+        "max_width": 512,
+        "min_height": 384,
+        "max_height": 384,
+        "mean_width": 512.0,
+        "mean_height": 384.0
+      },
+      "Metal": {
+        "valid_count": 250,
+        "min_width": 512,
+        "max_width": 512,
+        "min_height": 384,
+        "max_height": 384,
+        "mean_width": 512.0,
+        "mean_height": 384.0
+      },
+      "Cardboard": {
+        "valid_count": 250,
+        "min_width": 512,
+        "max_width": 512,
+        "min_height": 384,
+        "max_height": 384,
+        "mean_width": 512.0,
+        "mean_height": 384.0
+      },
+      "Organic": {
+        "valid_count": 180,
+        "min_width": 156,
+        "max_width": 389,
+        "min_height": 129,
+        "max_height": 324,
+        "mean_width": 261.7,
+        "mean_height": 194.8
+      },
+      "Battery": {
+        "valid_count": 180,
+        "min_width": 169,
+        "max_width": 357,
+        "min_height": 141,
+        "max_height": 298,
+        "mean_width": 245.8,
+        "mean_height": 206.3
+      },
+      "E-waste": {
+        "valid_count": 205,
+        "min_width": 88,
+        "max_width": 1064,
+        "min_height": 110,
+        "max_height": 727,
+        "mean_width": 316.7,
+        "mean_height": 243.7
+      }
+    },
+    "total_valid_images": 1815,
+    "corrupted_removed": 0,
+    "timestamp": "2026-11-21 21:51:00"
+  }
+}

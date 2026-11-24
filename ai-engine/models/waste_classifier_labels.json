@@ -1,0 +1,22 @@
+{
+  "class_names": [
+    "Plastic",
+    "Paper",
+    "Glass",
+    "Metal",
+    "Cardboard",
+    "Organic",
+    "Battery",
+    "E-waste"
+  ],
+  "label_to_index": {
+    "Plastic": 0,
+    "Paper": 1,
+    "Glass": 2,
+    "Metal": 3,
+    "Cardboard": 4,
+    "Organic": 5,
+    "Battery": 6,
+    "E-waste": 7
+  }
+}

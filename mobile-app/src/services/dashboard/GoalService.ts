@@ -43,6 +43,10 @@ const DEFAULT_GOALS: Goal[] = [
 class GoalService {
   private goalsCache: Goal[] | null = null;
 
+  resetCache(): void {
+    this.goalsCache = null;
+  }
+
   async getGoals(): Promise<Goal[]> {
     if (this.goalsCache) return this.goalsCache;
 

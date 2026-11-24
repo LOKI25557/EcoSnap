@@ -5,6 +5,11 @@ class LabelLoader {
   private labels: string[] = [];
   private loadPromise: Promise<void> | null = null;
 
+  resetCache(): void {
+    this.labels = [];
+    this.loadPromise = null;
+  }
+
   /**
    * Load and parse labels from assets/models/labels.txt
    * Uses caching to only load once.
@@ -31,6 +36,7 @@ class LabelLoader {
         const fileContent = await FileSystem.readAsStringAsync(fileUri);
         
         this.labels = fileContent
+          .replace(/^\ufeff/, '')
           .split('\n')
           .map(line => line.trim())
           .filter(line => line.length > 0);

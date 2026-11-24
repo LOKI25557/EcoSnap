@@ -1,0 +1,180 @@
+{
+  "config": {
+    "prepared_data_dir": "ai-engine\\datasets\\prepared",
+    "model_path": "C:\\Users\\Lokesh\\OneDrive\\Desktop\\Projects\\EcoSnap\\ai-engine\\models\\waste_classifier.keras",
+    "labels_path": "C:\\Users\\Lokesh\\OneDrive\\Desktop\\Projects\\EcoSnap\\ai-engine\\models\\waste_classifier_labels.json",
+    "history_path": "C:\\Users\\Lokesh\\OneDrive\\Desktop\\Projects\\EcoSnap\\ai-engine\\training\\waste_classifier_history.json",
+    "output_dir": "C:\\Users\\Lokesh\\OneDrive\\Desktop\\Projects\\EcoSnap\\ai-engine\\reports",
+    "image_size": [
+      224,
+      224
+    ],
+    "batch_size": 32,
+    "class_names": [
+      "Plastic",
+      "Paper",
+      "Glass",
+      "Metal",
+      "Cardboard",
+      "Organic",
+      "Battery",
+      "E-waste"
+    ]
+  },
+  "metrics": {
+    "accuracy": 0.8218181818181818,
+    "precision_macro": 0.8441912917007794,
+    "recall_macro": 0.8367328491479595,
+    "f1_macro": 0.8371902009027483
+  },
+  "classification_report": {
+    "Plastic": {
+      "precision": 0.7428571428571429,
+      "recall": 0.6842105263157895,
+      "f1-score": 0.7123287671232876,
+      "support": 38.0
+    },
+    "Paper": {
+      "precision": 0.8333333333333334,
+      "recall": 0.7894736842105263,
+      "f1-score": 0.8108108108108109,
+      "support": 38.0
+    },
+    "Glass": {
+      "precision": 0.5882352941176471,
+      "recall": 0.7894736842105263,
+      "f1-score": 0.6741573033707865,
+      "support": 38.0
+    },
+    "Metal": {
+      "precision": 0.7741935483870968,
+      "recall": 0.631578947368421,
+      "f1-score": 0.6956521739130435,
+      "support": 38.0
+    },
+    "Cardboard": {
+      "precision": 0.9428571428571428,
+      "recall": 0.868421052631579,
+      "f1-score": 0.9041095890410958,
+      "support": 38.0
+    },
+    "Organic": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 27.0
+    },
+    "Battery": {
+      "precision": 0.9629629629629629,
+      "recall": 0.9629629629629629,
+      "f1-score": 0.9629629629629629,
+      "support": 27.0
+    },
+    "E-waste": {
+      "precision": 0.9090909090909091,
+      "recall": 0.967741935483871,
+      "f1-score": 0.9375,
+      "support": 31.0
+    },
+    "accuracy": 0.8218181818181818,
+    "macro avg": {
+      "precision": 0.8441912917007794,
+      "recall": 0.8367328491479595,
+      "f1-score": 0.8371902009027483,
+      "support": 275.0
+    },
+    "weighted avg": {
+      "precision": 0.8315560862574836,
+      "recall": 0.8218181818181818,
+      "f1-score": 0.8230935581157924,
+      "support": 275.0
+    }
+  },
+  "confusion_matrix": [
+    [
+      26,
+      2,
+      9,
+      1,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      1,
+      30,
+      2,
+      1,
+      2,
+      0,
+      1,
+      1
+    ],
+    [
+      3,
+      0,
+      30,
+      5,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      4,
+      1,
+      9,
+      24,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      1,
+      3,
+      0,
+      0,
+      33,
+      0,
+      0,
+      1
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      27,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      26,
+      1
+    ],
+    [
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      30
+    ]
+  ],
+  "artifacts": {
+    "confusion_matrix": "C:\\Users\\Lokesh\\OneDrive\\Desktop\\Projects\\EcoSnap\\ai-engine\\reports\\confusion_matrix.png",
+    "accuracy_graph": "C:\\Users\\Lokesh\\OneDrive\\Desktop\\Projects\\EcoSnap\\ai-engine\\reports\\accuracy_graph.png",
+    "loss_graph": "C:\\Users\\Lokesh\\OneDrive\\Desktop\\Projects\\EcoSnap\\ai-engine\\reports\\loss_graph.png"
+  }
+}
